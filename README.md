@@ -125,6 +125,9 @@ extension. VS Code must see mise's shims on `PATH`.
 - [`internal/yamltext`](internal/yamltext): block mappings as line ranges.
 - [`internal/files`](internal/files): discovery through `git ls-files` and
   explicit-path selection.
+- [`agent-guard`](agent-guard): workstation policy that keeps Claude Code and
+  Codex away from SOPS keys and decrypted secrets. It is not part of the
+  release; run its installer directly.
 
 ## Development
 

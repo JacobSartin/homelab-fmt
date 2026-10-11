@@ -16,3 +16,13 @@ jobs:
       - run: go vet ./...
       - run: test -z "$(gofmt -l .)"
       - run: go test ./...
+  agent-guard:
+    # The installer targets Windows paths, ACLs and the user environment.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: node --test 'agent-guard/*.test.mjs'
+      - run: ./agent-guard/install.tests.ps1
