@@ -19,7 +19,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/JacobSartin/homelab-tools/internal/rules"
+	"github.com/JacobSartin/homelab-fmt/internal/rules"
 )
 
 type Template struct {

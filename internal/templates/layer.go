@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/JacobSartin/homelab-tools/internal/rules"
+	"github.com/JacobSartin/homelab-fmt/internal/rules"
 )
 
 // fills t.Chain and t.Rules from t and the templates it extends.
