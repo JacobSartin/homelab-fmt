@@ -1,4 +1,4 @@
-module github.com/JacobSartin/homelab-tools
+module github.com/JacobSartin/homelab-fmt
 
 go 1.27.0
 

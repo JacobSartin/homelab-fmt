@@ -1,4 +1,4 @@
-# Homelab tools
+# homelab-fmt
 
 `homelab-fmt` keeps the YAML in the homelab GitOps repositories in a
 consistent key order and blank-line layout. It is a single static binary with
@@ -99,7 +99,7 @@ attestations, which mise verifies. Pin a release in the repository's
 
 ```toml
 [tools]
-"github:JacobSartin/homelab-tools" = "0.1.0"
+"github:JacobSartin/homelab-fmt" = "0.1.0"
 ```
 
 To format on save in VS Code, keep oxfmt as the YAML formatter and run

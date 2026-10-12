@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/JacobSartin/homelab-tools/internal/files"
-	"github.com/JacobSartin/homelab-tools/internal/format"
-	"github.com/JacobSartin/homelab-tools/internal/templates"
+	"github.com/JacobSartin/homelab-fmt/internal/files"
+	"github.com/JacobSartin/homelab-fmt/internal/format"
+	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 func explain(paths []string, stdout, stderr io.Writer) int {

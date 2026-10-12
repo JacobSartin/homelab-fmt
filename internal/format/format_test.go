@@ -10,9 +10,9 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/JacobSartin/homelab-tools/internal/rules"
-	"github.com/JacobSartin/homelab-tools/internal/templates"
-	"github.com/JacobSartin/homelab-tools/internal/yamltext"
+	"github.com/JacobSartin/homelab-fmt/internal/rules"
+	"github.com/JacobSartin/homelab-fmt/internal/templates"
+	"github.com/JacobSartin/homelab-fmt/internal/yamltext"
 )
 
 // Each testdata/<name>.in.yaml must format to testdata/<name>.out.yaml, and
