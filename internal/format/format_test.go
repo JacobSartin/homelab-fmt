@@ -252,7 +252,8 @@ func reverseMappings(t *testing.T, text string) string {
 
 func TestExplain(t *testing.T) {
 	in := "apiVersion: helm.toolkit.fluxcd.io/v2\nkind: HelmRelease\nmetadata:\n  name: x\n" +
-		"---\nfoo: bar\n"
+		"---\nfoo: bar\n" +
+		"---\napiVersion: monitoring.coreos.com/v1\nkind: PrometheusRule\nspec:\n  groups:\n    - rules: [a, b]\n"
 	got, err := Explain("x.yaml", in, templates.Default)
 	if err != nil {
 		t.Fatal(err)
@@ -260,6 +261,7 @@ func TestExplain(t *testing.T) {
 	for _, want := range []string{
 		"x.yaml, document 1: template helm-release.yaml extends kubernetes.yaml\n",
 		"  metadata: order name, generateName, namespace, labels, annotations (helm-release.yaml:",
+		"  spec.groups.0.rules: separate items (prometheus-rule.yaml:",
 		"x.yaml, document 2: no template matches; left as is\n",
 	} {
 		if !strings.Contains(got, want) {

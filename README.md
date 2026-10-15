@@ -14,6 +14,7 @@ documents laid out the way formatted files should look.
 | [`kubernetes.yaml`](internal/templates/bundled/kubernetes.yaml) | top-level fields and `metadata` of every Kubernetes object |
 | [`helm-release.yaml`](internal/templates/bundled/helm-release.yaml) | Flux `HelmRelease` |
 | [`flux-kustomization.yaml`](internal/templates/bundled/flux-kustomization.yaml) | Flux `Kustomization` |
+| [`prometheus-rule.yaml`](internal/templates/bundled/prometheus-rule.yaml) | prometheus-operator `PrometheusRule`, with a blank line between rules |
 | [`kustomization.yaml`](internal/templates/bundled/kustomization.yaml), [`kustomize-component.yaml`](internal/templates/bundled/kustomize-component.yaml) | kustomize `Kustomization` and `Component` |
 
 How it edits:
