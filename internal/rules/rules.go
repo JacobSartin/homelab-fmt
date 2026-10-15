@@ -18,9 +18,10 @@ const (
 	Separate                // require a blank line
 )
 
-// how to order and space the mappings found at Path.
+// how to order and space the mappings, or with Items the list items, found at Path.
 type Rule struct {
 	Path       string   // dotted keys; "*" matches any key or list index, "" is the root
+	Items      bool     // spaces the items of a list; only Spacing applies
 	Order      []string // keys moved to the front, in this order
 	SortRest   bool     // sort unlisted keys instead of keeping their order
 	Spacing    Spacing
@@ -44,7 +45,11 @@ func (r Rule) Summarize() string {
 	case Compact:
 		parts = append(parts, "compact")
 	case Separate:
-		parts = append(parts, "separate entries")
+		if r.Items {
+			parts = append(parts, "separate items")
+		} else {
+			parts = append(parts, "separate entries")
+		}
 	}
 	if len(r.BlankAfter) > 0 {
 		parts = append(parts, "blank line after "+strings.Join(r.BlankAfter, ", "))
@@ -69,9 +74,10 @@ func Match(pattern string, path []string) bool {
 	return true
 }
 
-// returns the first rule that matches the key path.
-func First(set []Rule, path []string) (Rule, bool) {
-	i := slices.IndexFunc(set, func(r Rule) bool { return Match(r.Path, path) })
+// returns the first rule that matches the key path, for a list when items is
+// set and for a mapping otherwise.
+func First(set []Rule, path []string, items bool) (Rule, bool) {
+	i := slices.IndexFunc(set, func(r Rule) bool { return r.Items == items && Match(r.Path, path) })
 	if i < 0 {
 		return Rule{}, false
 	}

@@ -39,7 +39,7 @@ func (s *Set) resolve(t *Template, seen []string) error {
 func merge(child, parent []rules.Rule) []rules.Rule {
 	merged := slices.Clone(child)
 	for _, p := range parent {
-		i := slices.IndexFunc(merged, func(c rules.Rule) bool { return c.Path == p.Path })
+		i := slices.IndexFunc(merged, func(c rules.Rule) bool { return c.Path == p.Path && c.Items == p.Items })
 		if i < 0 {
 			merged = append(merged, p)
 			continue

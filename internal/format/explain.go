@@ -10,7 +10,8 @@ import (
 	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
-// lists the template each document matches and the rule for each of its mappings.
+// lists the template each document matches and the rule for each of its
+// mappings and lists.
 func Explain(path, text string, set *templates.Set) (string, error) {
 	if IsSOPS(path, text) {
 		return path + ": SOPS file, never formatted\n", nil
@@ -28,8 +29,8 @@ func Explain(path, text string, set *templates.Set) (string, error) {
 			continue
 		}
 		fmt.Fprintf(&b, "template %s\n", strings.Join(t.Chain, " extends "))
-		walk(doc.Content[0], nil, func(_ *yaml.Node, keys []string) bool {
-			if rule, ok := rules.First(t.Rules, keys); ok {
+		walk(doc.Content[0], nil, func(node *yaml.Node, keys []string) bool {
+			if rule, ok := rules.First(t.Rules, keys, node.Kind == yaml.SequenceNode); ok {
 				fmt.Fprintf(&b, "  %s: %s\n", pathName(keys), rule.Summarize())
 			}
 			return false

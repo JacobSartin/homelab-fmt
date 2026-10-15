@@ -70,6 +70,9 @@ blank lines and `homelab-fmt` comments matter.
   - `# homelab-fmt: compact` removes blank lines between the entries.
   - `# homelab-fmt: separate` requires a blank line between the entries.
 
+  On a key holding a list, `compact` and `separate` apply to the list's
+  items instead, with the comments above each dash kept with its item.
+
   Several directives can share a comment, separated by commas.
 
 Header comments, above the first key, select documents and layer templates:

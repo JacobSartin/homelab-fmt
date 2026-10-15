@@ -112,6 +112,33 @@ func TestRules(t *testing.T) {
 			want: "m:\n  a: 1\n  b: 2\n\n  c: 3\nn:\n  x: 1\n\n  y: 2\n",
 		},
 		{
+			name:  "separate list items, with comments above the dash",
+			rules: []rules.Rule{{Path: "list", Items: true, Spacing: rules.Separate}},
+			in:    "list:\n  - a: 1\n    b: 2\n  # about c\n  - c: 3\n  -\n    d: 4\n  - # e\n    e: 5\nm: 1\n",
+			want:  "list:\n  - a: 1\n    b: 2\n\n  # about c\n  - c: 3\n\n  -\n    d: 4\n\n  - # e\n    e: 5\nm: 1\n",
+		},
+		{
+			name:  "compact list items, also at the key's indentation",
+			rules: []rules.Rule{{Path: "list", Items: true, Spacing: rules.Compact}},
+			in:    "list:\n- a\n\n- b\n\nm: 1\n",
+			want:  "list:\n- a\n- b\n\nm: 1\n",
+		},
+		{
+			name: "list rules leave mappings at the same path alone",
+			rules: []rules.Rule{
+				{Path: "*", Items: true, Spacing: rules.Separate},
+				{Path: "*", Spacing: rules.Compact},
+			},
+			in:   "list:\n  - a\n  - b\nm:\n  x: 1\n\n  y: 2\n",
+			want: "list:\n  - a\n\n  - b\nm:\n  x: 1\n  y: 2\n",
+		},
+		{
+			name:  "flow lists are left alone",
+			rules: []rules.Rule{{Path: "f", Items: true, Spacing: rules.Separate}},
+			in:    "f: [a, b]\n",
+			want:  "f: [a, b]\n",
+		},
+		{
 			name:  "flow mappings are left alone",
 			rules: []rules.Rule{{Path: "f", SortRest: true, Spacing: rules.Separate}},
 			in:    "f: { b: 1, a: 2 }\n",
