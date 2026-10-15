@@ -7,7 +7,8 @@
 //   - A "*" key stands for any key. In a list, the first item describes every item.
 //   - A blank line between two keys is added after the first key when missing.
 //   - "# homelab-fmt: sort | compact | separate" on a key sets how the mapping
-//     under it treats unlisted keys and blank lines.
+//     under it treats unlisted keys and blank lines; compact and separate on a
+//     list's key space its items.
 //   - Header directives select documents ("schema <glob>", or apiVersion and
 //     kind) and layer templates ("extends <template>").
 package templates

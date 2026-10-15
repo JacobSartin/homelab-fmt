@@ -20,8 +20,14 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 	switch node.Kind {
 	case yaml.MappingNode:
 	case yaml.SequenceNode:
-		if len(flags) > 0 {
-			return fmt.Errorf("line %d: directives apply to mappings", node.Line)
+		if slices.Contains(flags, "sort") {
+			return fmt.Errorf("line %d: sort applies to mappings", node.Line)
+		}
+		if spacing := spacingOf(flags); spacing != rules.Keep {
+			t.own = append(t.own, rules.Rule{
+				Path: strings.Join(path, "."), Items: true, Spacing: spacing,
+				Source: fmt.Sprintf("%s:%d", t.Name, line),
+			})
 		}
 		if len(node.Content) == 0 {
 			return nil
@@ -30,21 +36,14 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 		return t.compile(lines, item, append(slices.Clip(path), "*"), nil, item.Line)
 	default:
 		if len(flags) > 0 {
-			return fmt.Errorf("line %d: directives apply to mappings", node.Line)
+			return fmt.Errorf("line %d: directives apply to mappings and lists", node.Line)
 		}
 		return nil
 	}
 
-	rule := rules.Rule{Path: strings.Join(path, "."), Source: fmt.Sprintf("%s:%d", t.Name, line)}
-	for _, flag := range flags {
-		switch flag {
-		case "sort":
-			rule.SortRest = true
-		case "compact":
-			rule.Spacing = rules.Compact
-		case "separate":
-			rule.Spacing = rules.Separate
-		}
+	rule := rules.Rule{
+		Path: strings.Join(path, "."), SortRest: slices.Contains(flags, "sort"), Spacing: spacingOf(flags),
+		Source: fmt.Sprintf("%s:%d", t.Name, line),
 	}
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		if key := node.Content[i].Value; !isWildcard(key) {
@@ -105,6 +104,16 @@ func (t *Template) compilePair(lines []string, node *yaml.Node, i int, path []st
 	return t.compile(lines, value, append(slices.Clip(path), segment), flags, key.Line)
 }
 
+func spacingOf(flags []string) rules.Spacing {
+	switch {
+	case slices.Contains(flags, "compact"):
+		return rules.Compact
+	case slices.Contains(flags, "separate"):
+		return rules.Separate
+	}
+	return rules.Keep
+}
+
 // "*" and labelled variants such as "*nfs" stand for any key. Variants let one
 // mapping hold several examples that must stay valid against a schema.
 func isWildcard(key string) bool { return strings.HasPrefix(key, "*") }
@@ -113,7 +122,7 @@ func isWildcard(key string) bool { return strings.HasPrefix(key, "*") }
 func joinVariants(own []rules.Rule) []rules.Rule {
 	var joined []rules.Rule
 	for _, r := range own {
-		i := slices.IndexFunc(joined, func(j rules.Rule) bool { return j.Path == r.Path })
+		i := slices.IndexFunc(joined, func(j rules.Rule) bool { return j.Path == r.Path && j.Items == r.Items })
 		if i < 0 {
 			joined = append(joined, r)
 			continue

@@ -130,3 +130,54 @@ func (m Mapping) Replace(lines []string, with []string) []string {
 	first, last := m.Entries[0].Start, m.Entries[len(m.Entries)-1].End
 	return slices.Concat(lines[:first], with, lines[last+1:])
 }
+
+// line ranges of a block sequence's items, each with the comments directly
+// above its dash; false when the layout cannot be spaced line by line.
+func Items(lines []string, node *yaml.Node) (Mapping, bool) {
+	if node.Kind != yaml.SequenceNode || node.Style&yaml.FlowStyle != 0 || len(node.Content) < 2 {
+		return Mapping{}, false
+	}
+	indent := node.Column - 1
+	isDash := func(line string) bool {
+		return indentOf(line) == indent && strings.HasPrefix(line[indent:], "-") && !strings.HasPrefix(line, "---")
+	}
+	m := Mapping{Indent: indent}
+	for i, item := range node.Content {
+		// The dash may sit above the item's first line ("- # comment").
+		line := item.Line - 1
+		for line > 0 && !isDash(lines[line]) {
+			line--
+		}
+		if !isDash(lines[line]) || (i > 0 && line <= m.Entries[i-1].End) {
+			return Mapping{}, false
+		}
+		start := line
+		if i > 0 {
+			for start > m.Entries[i-1].End+1 && isComment(lines[start-1]) && indentOf(lines[start-1]) == indent {
+				start--
+			}
+		}
+		end := line
+		for j := line + 1; j < len(lines); j++ {
+			ind := indentOf(lines[j])
+			if ind < 0 {
+				continue
+			}
+			if ind <= indent {
+				break
+			}
+			end = j
+		}
+		m.Entries = append(m.Entries, Entry{Start: start, End: end})
+	}
+	return m, true
+}
+
+// the mapping's lines with entries in place and gaps[i] before entry i.
+func (m Mapping) Space(lines []string, gaps [][]string) []string {
+	var out []string
+	for i, e := range m.Entries {
+		out = append(append(out, gaps[i]...), lines[e.Start:e.End+1]...)
+	}
+	return out
+}

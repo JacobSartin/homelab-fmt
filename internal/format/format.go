@@ -117,7 +117,8 @@ func decode(text string) ([]any, error) {
 	}
 }
 
-// calls fn for every mapping under node, parents first; stops when fn returns true.
+// calls fn for every mapping and list under node, parents first; stops when
+// fn returns true.
 func walk(node *yaml.Node, path []string, fn func(node *yaml.Node, path []string) bool) bool {
 	switch node.Kind {
 	case yaml.MappingNode:
@@ -130,6 +131,9 @@ func walk(node *yaml.Node, path []string, fn func(node *yaml.Node, path []string
 			}
 		}
 	case yaml.SequenceNode:
+		if fn(node, path) {
+			return true
+		}
 		for i, item := range node.Content {
 			if walk(item, append(slices.Clip(path), strconv.Itoa(i)), fn) {
 				return true
@@ -162,9 +166,14 @@ func nextEdit(text string, docs []*yaml.Node, rulesFor RulesFor, blocked map[str
 		set := rulesFor(doc)
 		var found edit
 		ok := walk(doc.Content[0], nil, func(node *yaml.Node, path []string) bool {
-			rule, ok := rules.First(set, path)
+			items := node.Kind == yaml.SequenceNode
+			rule, ok := rules.First(set, path, items)
 			if !ok {
 				return false
+			}
+			if items {
+				found, ok = fixItems(lines, node, path, rule)
+				return ok
 			}
 			id := strconv.Itoa(d) + ":" + strings.Join(path, ".")
 			found, ok = fix(lines, node, path, rule, node == doc.Content[0], blocked[id])
@@ -218,5 +227,28 @@ func fix(lines []string, node *yaml.Node, path []string, rule rules.Rule, top, b
 		return edit{}, false
 	}
 	text := strings.Join(m.Replace(lines, m.Render(lines, keys, spaced)), "\n")
+	return edit{text: text, path: pathName(path)}, true
+}
+
+// the edit that spaces a list's items by its rule, if it needs one.
+func fixItems(lines []string, node *yaml.Node, path []string, rule rules.Rule) (edit, bool) {
+	m, ok := yamltext.Items(lines, node)
+	if !ok {
+		return edit{}, false
+	}
+	gaps := m.Gaps(lines)
+	spaced := slices.Clone(gaps)
+	for i := 1; i < len(spaced); i++ {
+		switch blank := slices.ContainsFunc(spaced[i], yamltext.IsBlank); {
+		case rule.Spacing == rules.Separate && !blank:
+			spaced[i] = append([]string{""}, spaced[i]...)
+		case rule.Spacing == rules.Compact:
+			spaced[i] = slices.DeleteFunc(slices.Clone(spaced[i]), yamltext.IsBlank)
+		}
+	}
+	if slices.EqualFunc(gaps, spaced, slices.Equal) {
+		return edit{}, false
+	}
+	text := strings.Join(m.Replace(lines, m.Space(lines, spaced)), "\n")
 	return edit{text: text, path: pathName(path)}, true
 }

@@ -57,7 +57,7 @@ data:
     b: 1
 
     a: 2
-list:
+list: # homelab-fmt: separate
   - z: 1
     y: 2
 `})
@@ -76,6 +76,10 @@ list:
 	if got := ruleAt(t, tmpl, "list.*").Order; !slices.Equal(got, []string{"z", "y"}) {
 		t.Errorf("sequence item order %q", got)
 	}
+	items, ok := rules.First(tmpl.Rules, []string{"list"}, true)
+	if !ok || items.Spacing != rules.Separate || items.Source != "t.yaml:11" {
+		t.Errorf("list rule %+v", items)
+	}
 	if got := ruleAt(t, tmpl, "metadata").Source; got != "t.yaml:3" {
 		t.Errorf("source %q", got)
 	}
@@ -92,7 +96,7 @@ items:
     b: 1
     a: 2
 `})
-	got, _ := rules.First(set.Templates()[0].Rules, []string{"items", "special"})
+	got, _ := rules.First(set.Templates()[0].Rules, []string{"items", "special"}, false)
 	if !slices.Equal(got.Order, []string{"b", "a"}) {
 		t.Errorf("got %+v", got)
 	}
@@ -151,6 +155,7 @@ func TestLoadErrors(t *testing.T) {
 	for want, files := range map[string]map[string]string{
 		"unknown directive":            {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: alphabetize\n"},
 		"directives apply to mappings": {"t.yaml": "apiVersion: v1\nkind: A\nx: 1 # homelab-fmt: sort\n"},
+		"sort applies to mappings":     {"t.yaml": "apiVersion: v1\nkind: A\nx: [] # homelab-fmt: sort\n"},
 		"apiVersion and kind":          {"t.yaml": "a: 1\n"},
 		"one document":                 {"t.yaml": "apiVersion: v1\nkind: A\n---\nb: 1\n"},
 		"unknown template":             {"t.yaml": "# homelab-fmt: extends nope.yaml\napiVersion: v1\nkind: A\n"},
