@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: example
+  namespace: example
+spec:
+  groups:
+    - name: example.health
+      rules:
+        - alert: TargetDown
+          expr: up == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} is down"
+
+        # Fires when the exporter disappears.
+        - alert: ExporterMissing
+          expr: |
+            absent(up{job="example"})
+          for: 15m
+
+
+        - record: job:up:sum
+          expr: sum by (job) (up)

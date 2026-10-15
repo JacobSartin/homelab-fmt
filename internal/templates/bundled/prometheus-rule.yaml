@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A rule has alert or record, not both.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: example
+spec:
+  groups:
+    - name: example
+      interval: 1m
+      query_offset: 0s
+      limit: 0
+      partial_response_strategy: warn
+      labels: {}
+      rules: # homelab-fmt: separate
+        - alert: Example
+          record: example:metric:rate5m
+          expr: up == 0
+          for: 5m
+          keep_firing_for: 5m
+          labels: {}
+          annotations: {}
