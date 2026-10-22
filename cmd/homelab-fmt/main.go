@@ -21,7 +21,8 @@ const usage = `Usage: homelab-fmt [--check] [path...]
 
 Orders keys and blank lines in app-template values and Kubernetes manifests.
 Without paths, formats every YAML file Git does not ignore. Paths that are not
-YAML files are skipped. Layout is left to oxfmt.
+YAML files are skipped; directories are searched recursively. Outside Git,
+pass an explicit path such as ".". Layout is left to oxfmt.
 
 explain prints the template each document matches and the rule for each mapping.
 
@@ -73,12 +74,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitRuntime
 	}
 	paths := flags.Args()
-	targets := files.Select(root, paths)
+	var targets []string
 	if len(paths) == 0 {
-		if targets, err = files.Discover(root); err != nil {
-			fmt.Fprintf(stderr, "listing files with git: %v\n", err)
-			return exitRuntime
-		}
+		targets, err = files.Discover(root)
+	} else {
+		targets, err = files.Select(root, paths)
+	}
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return exitRuntime
 	}
 
 	changed, warnings, failed := 0, 0, 0
