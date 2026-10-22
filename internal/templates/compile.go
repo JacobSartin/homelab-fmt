@@ -17,10 +17,11 @@ var directivePrefix = regexp.MustCompile(`^#\s*homelab-fmt:\s*(.*)$`)
 // adds a rule for each mapping under node. flags are the directives on the
 // key holding node, and line is that key's line.
 func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string, line int) error {
+	mode, sorted := sortOf(flags)
 	switch node.Kind {
 	case yaml.MappingNode:
 	case yaml.SequenceNode:
-		if slices.Contains(flags, "sort") {
+		if sorted {
 			return fmt.Errorf("line %d: sort applies to mappings", node.Line)
 		}
 		if spacing := spacingOf(flags); spacing != rules.Keep {
@@ -42,7 +43,7 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 	}
 
 	rule := rules.Rule{
-		Path: rules.PathString(path), SortRest: slices.Contains(flags, "sort"), Spacing: spacingOf(flags),
+		Path: rules.PathString(path), SortRest: sorted, SortMode: mode, Spacing: spacingOf(flags),
 		Source: fmt.Sprintf("%s:%d", t.Name, line),
 	}
 	for i := 0; i+1 < len(node.Content); i += 2 {
@@ -91,7 +92,14 @@ func (t *Template) compilePair(lines []string, node *yaml.Node, i int, path []st
 	var flags []string
 	for _, d := range directives(comments...) {
 		switch d {
-		case "sort", "compact", "separate":
+		case "sort", "sort alphabetical", "sort size-asc", "sort size-desc", "compact", "separate":
+			if strings.HasPrefix(d, "sort") {
+				before, hadSort := sortOf(flags)
+				after, _ := sortOf([]string{d})
+				if hadSort && before != after {
+					return fmt.Errorf("line %d: conflicting sort directives", key.Line)
+				}
+			}
 			flags = append(flags, d)
 		default:
 			return fmt.Errorf("line %d: unknown directive %q", key.Line, d)
@@ -102,6 +110,20 @@ func (t *Template) compilePair(lines []string, node *yaml.Node, i int, path []st
 		segment = "*"
 	}
 	return t.compile(lines, value, append(slices.Clip(path), segment), flags, key.Line)
+}
+
+func sortOf(flags []string) (rules.SortMode, bool) {
+	for _, flag := range flags {
+		switch flag {
+		case "sort", "sort size-asc":
+			return rules.SizeAscending, true
+		case "sort size-desc":
+			return rules.SizeDescending, true
+		case "sort alphabetical":
+			return rules.Alphabetical, true
+		}
+	}
+	return rules.Alphabetical, false
 }
 
 func spacingOf(flags []string) rules.Spacing {
@@ -129,6 +151,9 @@ func joinVariants(own []rules.Rule) []rules.Rule {
 		}
 		j := &joined[i]
 		j.Order = interleave(j.Order, r.Order)
+		if !j.SortRest {
+			j.SortMode = r.SortMode
+		}
 		j.SortRest = j.SortRest || r.SortRest
 		if j.Spacing == rules.Keep {
 			j.Spacing = r.Spacing

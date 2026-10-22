@@ -50,6 +50,9 @@ func merge(child, parent []rules.Rule) []rules.Rule {
 				c.Order = append(c.Order, key)
 			}
 		}
+		if !c.SortRest {
+			c.SortMode = p.SortMode
+		}
 		c.SortRest = c.SortRest || p.SortRest
 		if c.Spacing == rules.Keep {
 			c.Spacing = p.Spacing

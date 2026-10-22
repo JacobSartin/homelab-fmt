@@ -268,7 +268,18 @@ func fix(lines []string, node *yaml.Node, path []string, rule rules.Rule, top, b
 	keys := m.Keys()
 	gaps := m.Gaps(lines)
 	if rule.Reorders() && !blocked {
-		if sorted := rule.Sorted(keys); !slices.Equal(sorted, keys) {
+		var sizes map[string]int
+		if rule.SortRest {
+			switch rule.SortMode {
+			case rules.Alphabetical:
+			case rules.SizeAscending, rules.SizeDescending:
+				sizes = make(map[string]int, len(m.Entries))
+				for _, entry := range m.Entries {
+					sizes[entry.Key] = entry.End - entry.Start + 1
+				}
+			}
+		}
+		if sorted := rule.SortedWithSizes(keys, sizes); !slices.Equal(sorted, keys) {
 			text := strings.Join(m.Replace(lines, m.Render(lines, sorted, gaps)), "\n")
 			return edit{text: text, path: pathName(path), moves: true}, true
 		}

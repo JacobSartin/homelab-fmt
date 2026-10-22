@@ -16,12 +16,22 @@ const (
 	Separate                // require a blank line
 )
 
+// SortMode controls unlisted keys when SortRest is enabled.
+type SortMode int
+
+const (
+	Alphabetical SortMode = iota // natural key order; the Go API's default
+	SizeAscending
+	SizeDescending
+)
+
 // how to order and space the mappings, or with Items the list items, found at Path.
 type Rule struct {
 	Path       string   // PathString-encoded keys; "*" matches any key or list index, "" is the root
 	Items      bool     // spaces the items of a list; only Spacing applies
 	Order      []string // keys moved to the front, in this order
 	SortRest   bool     // sort unlisted keys instead of keeping their order
+	SortMode   SortMode // compare section line counts or key names
 	Spacing    Spacing
 	BlankAfter []string // keys followed by a blank line
 	Source     string   // template file and line, shown by explain
@@ -37,7 +47,16 @@ func (r Rule) Summarize() string {
 		parts = append(parts, "order "+strings.Join(r.Order, ", "))
 	}
 	if r.SortRest {
-		parts = append(parts, "sort other keys")
+		var mode string
+		switch r.SortMode {
+		case Alphabetical:
+			mode = "alphabetically"
+		case SizeAscending:
+			mode = "by size ascending"
+		case SizeDescending:
+			mode = "by size descending"
+		}
+		parts = append(parts, "sort other keys "+mode)
 	}
 	switch r.Spacing {
 	case Compact:
@@ -102,6 +121,12 @@ func First(set []Rule, path []string, items bool) (Rule, bool) {
 
 // returns keys in the order the rule requires.
 func (r Rule) Sorted(keys []string) []string {
+	return r.SortedWithSizes(keys, nil)
+}
+
+// SortedWithSizes orders keys using rendered section line counts. Equal sizes
+// (or unavailable sizes) use natural key order; listed keys always come first.
+func (r Rule) SortedWithSizes(keys []string, sizes map[string]int) []string {
 	rank := func(key string) int {
 		if i := slices.Index(r.Order, key); i >= 0 {
 			return i
@@ -111,6 +136,18 @@ func (r Rule) Sorted(keys []string) []string {
 	sorted := slices.Clone(keys)
 	slices.SortStableFunc(sorted, func(a, b string) int {
 		if d := rank(a) - rank(b); d != 0 || !r.SortRest || rank(a) < len(r.Order) {
+			return d
+		}
+		var d int
+		switch r.SortMode {
+		case Alphabetical:
+			return NaturalCompare(a, b)
+		case SizeAscending:
+			d = sizes[a] - sizes[b]
+		case SizeDescending:
+			d = sizes[b] - sizes[a]
+		}
+		if d != 0 {
 			return d
 		}
 		return NaturalCompare(a, b)

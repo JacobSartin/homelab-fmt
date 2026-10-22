@@ -24,6 +24,11 @@ How it edits:
 - Comments directly above a key move with it; blank lines and detached
   comments stay where they were. The comment at the top of a document (such
   as the schema modeline) stays on top.
+- Files named `*.sops.*`, or with a top-level `sops:` key, are checked with
+  `sops filestatus` when available. Encrypted files are never touched;
+  plaintext files format normally. Missing SOPS or failed checks retain the
+  conservative skip behavior. `explain` uses the same detection; no keys or
+  decryption are needed.
 - A mapping stays unsorted, with a warning, when sorting would move a YAML
   alias above its anchor.
 - The result must parse to the same data as the input, or the file is
@@ -83,7 +88,14 @@ blank lines and `homelab-fmt` comments matter.
   mapping is `compact`.
 - **Directives** go in a comment on a key's line and apply to the mapping
   under that key:
-  - `# homelab-fmt: sort` sorts the keys the template does not list.
+  - `# homelab-fmt: sort` sorts keys the template does not list by section
+    size, smallest first. `sort size-asc` is equivalent; `sort size-desc`
+    puts the largest sections first. Size is the rendered line count of a key,
+    attached comments and all nested content, including internal blank lines;
+    gaps between sibling keys are excluded. Equal sizes use natural key order
+    (for example, `item2` before `item10`). Listed keys always come first.
+  - `# homelab-fmt: sort alphabetical` uses natural key order regardless of
+    section size, matching the original `sort` behavior.
   - `# homelab-fmt: compact` removes blank lines between the entries.
   - `# homelab-fmt: separate` requires a blank line between the entries.
 
