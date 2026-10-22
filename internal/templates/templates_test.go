@@ -66,7 +66,7 @@ list: # homelab-fmt: separate
 	if got := ruleAt(t, tmpl, "").Order; !slices.Equal(got, root) {
 		t.Errorf("root order %q", got)
 	}
-	if !ruleAt(t, tmpl, "metadata.labels").SortRest {
+	if r := ruleAt(t, tmpl, "metadata.labels"); !r.SortRest || r.SortMode != rules.SizeAscending {
 		t.Error("labels not sorted")
 	}
 	wild := ruleAt(t, tmpl, "data.*")
@@ -153,12 +153,14 @@ func TestMatchPicksTheMostSpecificTemplate(t *testing.T) {
 
 func TestLoadErrors(t *testing.T) {
 	for want, files := range map[string]map[string]string{
-		"unknown directive":            {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: alphabetize\n"},
-		"directives apply to mappings": {"t.yaml": "apiVersion: v1\nkind: A\nx: 1 # homelab-fmt: sort\n"},
-		"sort applies to mappings":     {"t.yaml": "apiVersion: v1\nkind: A\nx: [] # homelab-fmt: sort\n"},
-		"apiVersion and kind":          {"t.yaml": "a: 1\n"},
-		"one document":                 {"t.yaml": "apiVersion: v1\nkind: A\n---\nb: 1\n"},
-		"unknown template":             {"t.yaml": "# homelab-fmt: extends nope.yaml\napiVersion: v1\nkind: A\n"},
+		"unknown directive":                 {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: alphabetize\n"},
+		"directives apply to mappings":      {"t.yaml": "apiVersion: v1\nkind: A\nx: 1 # homelab-fmt: sort\n"},
+		"sort applies to mappings":          {"t.yaml": "apiVersion: v1\nkind: A\nx: [] # homelab-fmt: sort\n"},
+		"unknown directive \"sort random\"": {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: sort random\n"},
+		"conflicting sort directives":       {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: sort, sort size-desc\n"},
+		"apiVersion and kind":               {"t.yaml": "a: 1\n"},
+		"one document":                      {"t.yaml": "apiVersion: v1\nkind: A\n---\nb: 1\n"},
+		"unknown template":                  {"t.yaml": "# homelab-fmt: extends nope.yaml\napiVersion: v1\nkind: A\n"},
 		"extends cycle": {
 			"a.yaml": "# homelab-fmt: extends b.yaml\napiVersion: v1\nkind: A\n",
 			"b.yaml": "# homelab-fmt: extends a.yaml\napiVersion: v1\nkind: B\n",
@@ -170,6 +172,25 @@ func TestLoadErrors(t *testing.T) {
 	} {
 		if _, err := load(files); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("want error containing %q, got %v", want, err)
+		}
+	}
+}
+
+func TestSortModesCompileAndLayer(t *testing.T) {
+	for directive, mode := range map[string]rules.SortMode{
+		"": rules.SizeDescending, "sort": rules.SizeAscending, "sort size-asc": rules.SizeAscending,
+		"sort size-desc": rules.SizeDescending, "sort alphabetical": rules.Alphabetical,
+	} {
+		comment := ""
+		if directive != "" {
+			comment = " # homelab-fmt: " + directive
+		}
+		set := mustLoad(t, map[string]string{
+			"base.yaml":  "apiVersion: v1\nkind: Base\nmetadata: {} # homelab-fmt: sort size-desc\n",
+			"child.yaml": "# homelab-fmt: extends base.yaml\napiVersion: v1\nkind: Child\nmetadata:" + comment + "\n  name: x\n",
+		})
+		if r := ruleAt(t, set.Templates()[1], "metadata"); !r.SortRest || r.SortMode != mode {
+			t.Errorf("%q: rule %+v, want mode %d", directive, r, mode)
 		}
 	}
 }
@@ -187,7 +208,7 @@ func TestWildcardVariantsMergeTheirOrders(t *testing.T) {
 	set := mustLoad(t, map[string]string{"t.yaml": `apiVersion: v1
 kind: List
 volumes:
-  "*claim":
+  "*claim": # homelab-fmt: sort size-desc
     type: pvc
     claim: x
     mounts: []
@@ -198,7 +219,8 @@ volumes:
     mounts: []
 `})
 	want := []string{"type", "claim", "server", "path", "mounts"}
-	if got := ruleAt(t, set.Templates()[0], "volumes.*").Order; !slices.Equal(got, want) {
-		t.Errorf("got %q, want %q", got, want)
+	rule := ruleAt(t, set.Templates()[0], "volumes.*")
+	if !slices.Equal(rule.Order, want) || !rule.SortRest || rule.SortMode != rules.SizeDescending {
+		t.Errorf("got %+v, want order %q with descending size sort", rule, want)
 	}
 }

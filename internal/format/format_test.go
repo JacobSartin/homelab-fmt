@@ -374,3 +374,64 @@ func TestChangedReportsEdits(t *testing.T) {
 		}
 	}
 }
+
+func TestSizeSorting(t *testing.T) {
+	for _, tc := range []struct {
+		name, in, want string
+		set            []rules.Rule
+	}{
+		{
+			name: "section lines include nested content and attached comments",
+			in:   "large:\n  nested:\n    x: 1\n# attached\ncommented: 1\nsmall10: 1\nsmall2: 1\nlisted: [a, b]\n",
+			want: "listed: [a, b]\nsmall2: 1\nsmall10: 1\n# attached\ncommented: 1\nlarge:\n  nested:\n    x: 1\n",
+			set:  []rules.Rule{{Order: []string{"listed"}, SortRest: true, SortMode: rules.SizeAscending, Spacing: rules.Compact}},
+		},
+		{
+			name: "lists and multiline scalars count their rendered lines",
+			in:   "scalar: |\n  a\n  b\nlist:\n  - a\n  - b\nsmall: x\n",
+			want: "small: x\nlist:\n  - a\n  - b\nscalar: |\n  a\n  b\n",
+			set:  []rules.Rule{{SortRest: true, SortMode: rules.SizeAscending}},
+		},
+		{
+			name: "sibling gaps do not contribute to size",
+			in:   "b: 1\n\n\na: 1\n",
+			want: "a: 1\n\n\nb: 1\n",
+			set:  []rules.Rule{{SortRest: true, SortMode: rules.SizeAscending}},
+		},
+		{
+			name: "nested spacing settles before the final size order",
+			in:   "sections:\n  a:\n    y: 1\n\n    x: 2\n  b:\n    first: 1\n    second: 2\n",
+			want: "sections:\n  a:\n    y: 1\n    x: 2\n  b:\n    first: 1\n    second: 2\n",
+			set: []rules.Rule{
+				{Path: "sections", SortRest: true, SortMode: rules.SizeAscending},
+				{Path: "sections.*", Spacing: rules.Compact},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Format("x.yaml", tc.in, with(tc.set...))
+			if err != nil || got.Output != tc.want {
+				t.Fatalf("Format = %q, %v; want %q", got.Output, err, tc.want)
+			}
+			if got.Stats.MappingsReordered != 1 {
+				t.Errorf("reordered mappings = %d, want 1 even after repeated passes", got.Stats.MappingsReordered)
+			}
+			again, err := Format("x.yaml", got.Output, with(tc.set...))
+			if err != nil || again.Changed || again.Output != got.Output {
+				t.Errorf("second format = %+v, %v", again, err)
+			}
+		})
+	}
+}
+
+func TestBundledSortDefaultsToSize(t *testing.T) {
+	in := "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: x\n  annotations:\n    a: |\n      many\n      lines\n    z: single\n"
+	want := "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: x\n  annotations:\n    z: single\n    a: |\n      many\n      lines\n"
+	if got := format(t, "x.yaml", in); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	explanation, err := Explain("x.yaml", in, templates.Default)
+	if err != nil || !strings.Contains(explanation, "sort other keys by size ascending") {
+		t.Errorf("Explain = %q, %v", explanation, err)
+	}
+}

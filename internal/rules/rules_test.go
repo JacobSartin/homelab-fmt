@@ -93,3 +93,21 @@ func TestSorted(t *testing.T) {
 		t.Errorf("sorted: got %q", sorted)
 	}
 }
+
+func TestSortModes(t *testing.T) {
+	keys := []string{"z", "item10", "item2", "listed"}
+	sizes := map[string]int{"z": 1, "item10": 3, "item2": 3, "listed": 10}
+	for _, tc := range []struct {
+		mode SortMode
+		want []string
+	}{
+		{Alphabetical, []string{"listed", "item2", "item10", "z"}},
+		{SizeAscending, []string{"listed", "z", "item2", "item10"}},
+		{SizeDescending, []string{"listed", "item2", "item10", "z"}},
+	} {
+		rule := Rule{Order: []string{"listed"}, SortRest: true, SortMode: tc.mode}
+		if got := rule.SortedWithSizes(keys, sizes); !slices.Equal(got, tc.want) {
+			t.Errorf("mode %d: got %q, want %q", tc.mode, got, tc.want)
+		}
+	}
+}
