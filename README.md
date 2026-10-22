@@ -39,6 +39,10 @@ homelab-fmt a.yaml b.md          # format only these; non-YAML paths are skipped
 homelab-fmt explain a.yaml       # show the template and rule for each mapping
 ```
 
+Runs without paths summarize changed files, reordered mappings, blank lines
+added or removed, warnings and errors. Check mode reports the edits it would
+make; write mode counts only successful files. Rejected edits do not count.
+
 | Exit status | Meaning |
 | --- | --- |
 | 0 | Done; with `--check`, nothing needs formatting |
