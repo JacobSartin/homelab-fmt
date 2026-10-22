@@ -47,10 +47,13 @@ func (r Rule) Summarize() string {
 		parts = append(parts, "order "+strings.Join(r.Order, ", "))
 	}
 	if r.SortRest {
-		mode := "alphabetically"
-		if r.SortMode == SizeAscending {
+		var mode string
+		switch r.SortMode {
+		case Alphabetical:
+			mode = "alphabetically"
+		case SizeAscending:
 			mode = "by size ascending"
-		} else if r.SortMode == SizeDescending {
+		case SizeDescending:
 			mode = "by size descending"
 		}
 		parts = append(parts, "sort other keys "+mode)
@@ -135,14 +138,17 @@ func (r Rule) SortedWithSizes(keys []string, sizes map[string]int) []string {
 		if d := rank(a) - rank(b); d != 0 || !r.SortRest || rank(a) < len(r.Order) {
 			return d
 		}
-		if r.SortMode != Alphabetical {
-			d := sizes[a] - sizes[b]
-			if r.SortMode == SizeDescending {
-				d = -d
-			}
-			if d != 0 {
-				return d
-			}
+		var d int
+		switch r.SortMode {
+		case Alphabetical:
+			return NaturalCompare(a, b)
+		case SizeAscending:
+			d = sizes[a] - sizes[b]
+		case SizeDescending:
+			d = sizes[b] - sizes[a]
+		}
+		if d != 0 {
+			return d
 		}
 		return NaturalCompare(a, b)
 	})
