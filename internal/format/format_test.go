@@ -193,6 +193,41 @@ func TestInvalidYAMLIsAnError(t *testing.T) {
 	}
 }
 
+func TestNaNScalarsPreserveData(t *testing.T) {
+	for _, tc := range []struct {
+		name, in, want string
+		changed        bool
+	}{
+		{"root scalar", ".nan\n", ".nan\n", false},
+		{"unchanged mapping", "a: .NaN\nb: value\n", "a: .NaN\nb: value\n", false},
+		{
+			"reordered nested mappings and lists",
+			"b:\n  1: .nan\na:\n  - .NAN\n  - other: .nan\n",
+			"a:\n  - .NAN\n  - other: .nan\nb:\n  1: .nan\n",
+			true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Format("x.yaml", tc.in, with(rules.Rule{Path: "", SortRest: true}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Output != tc.want || result.Changed != tc.changed {
+				t.Errorf("output = %q, changed = %v; want %q, %v", result.Output, result.Changed, tc.want, tc.changed)
+			}
+		})
+	}
+}
+
+func TestNaNDoesNotHideDataChanges(t *testing.T) {
+	// The blank line belongs to the keep-chomped scalar. Moving it to a gap
+	// before that scalar would lose one newline, even though the NaN is unchanged.
+	in := "b: |+\n  hello\n\na: .nan\n"
+	if _, err := Format("x.yaml", in, with(rules.Rule{Path: "", SortRest: true})); err == nil {
+		t.Fatal("expected an error when an edit changes another scalar")
+	}
+}
+
 // Every template must already follow its own rules, and must be restored
 // after every mapping in it is reversed.
 func TestTemplatesFormatToThemselves(t *testing.T) {

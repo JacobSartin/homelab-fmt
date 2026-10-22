@@ -4,9 +4,7 @@ package rules
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
-	"unicode"
 )
 
 // blank lines between the entries of a mapping.
@@ -102,7 +100,7 @@ func (r Rule) Sorted(keys []string) []string {
 	return sorted
 }
 
-// orders strings by code point, comparing digit runs numerically.
+// orders strings by code point, comparing ASCII digit runs numerically.
 func NaturalCompare(a, b string) int {
 	x, y := chunks(a), chunks(b)
 	for i := 0; i < min(len(x), len(y)); i++ {
@@ -110,13 +108,12 @@ func NaturalCompare(a, b string) int {
 			continue
 		}
 		if isDigits(x[i]) && isDigits(y[i]) {
-			m, _ := strconv.ParseUint(x[i], 10, 64)
-			n, _ := strconv.ParseUint(y[i], 10, 64)
-			if m != n {
-				if m < n {
-					return -1
-				}
-				return 1
+			m, n := strings.TrimLeft(x[i], "0"), strings.TrimLeft(y[i], "0")
+			if len(m) != len(n) {
+				return len(m) - len(n)
+			}
+			if d := strings.Compare(m, n); d != 0 {
+				return d
 			}
 		}
 		return strings.Compare(x[i], y[i])
@@ -128,8 +125,8 @@ func NaturalCompare(a, b string) int {
 func chunks(s string) []string {
 	var out []string
 	for len(s) > 0 {
-		digit := unicode.IsDigit(rune(s[0]))
-		i := strings.IndexFunc(s, func(r rune) bool { return unicode.IsDigit(r) != digit })
+		digit := isDigits(s)
+		i := strings.IndexFunc(s, func(r rune) bool { return (r >= '0' && r <= '9') != digit })
 		if i < 0 {
 			i = len(s)
 		}
@@ -139,5 +136,5 @@ func chunks(s string) []string {
 	return out
 }
 
-// checks if the character is a digit
-func isDigits(s string) bool { return s != "" && unicode.IsDigit(rune(s[0])) }
+// checks if the first byte is an ASCII digit.
+func isDigits(s string) bool { return s != "" && s[0] >= '0' && s[0] <= '9' }
