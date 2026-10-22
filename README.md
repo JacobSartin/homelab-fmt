@@ -24,7 +24,6 @@ How it edits:
 - Comments directly above a key move with it; blank lines and detached
   comments stay where they were. The comment at the top of a document (such
   as the schema modeline) stays on top.
-- SOPS files (`*.sops.*`, or a top-level `sops:` key) are never touched.
 - A mapping stays unsorted, with a warning, when sorting would move a YAML
   alias above its anchor.
 - The result must parse to the same data as the input, or the file is

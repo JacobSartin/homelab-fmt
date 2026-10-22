@@ -12,8 +12,8 @@ import (
 
 // lists the template each document matches and the rule for each of its
 // mappings and lists.
-func Explain(path, text string, set *templates.Set) (string, error) {
-	if IsSOPS(path, text) {
+func Explain(path, text string, set *templates.Set, options ...Options) (string, error) {
+	if isSOPS(path, text, options) {
 		return path + ": SOPS file, never formatted\n", nil
 	}
 	docs, err := parse(strings.ReplaceAll(text, "\r\n", "\n"))

@@ -34,7 +34,7 @@ func explain(paths []string, stdout, stderr io.Writer) int {
 			errored = true
 			continue
 		}
-		text, err := format.Explain(file, string(data), templates.Default)
+		text, err := format.Explain(file, string(data), templates.Default, sopsOptions(filepath.Join(root, file), string(data), fileStatus))
 		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", file, err)
 			errored = true
