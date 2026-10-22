@@ -21,8 +21,13 @@ func explain(paths []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return exitRuntime
 	}
+	targets, err := files.Select(root, paths)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return exitRuntime
+	}
 	errored := false
-	for _, file := range files.Select(root, paths) {
+	for _, file := range targets {
 		data, err := os.ReadFile(filepath.Join(root, file))
 		if err != nil {
 			fmt.Fprintln(stderr, err)

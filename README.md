@@ -36,8 +36,18 @@ How it edits:
 homelab-fmt                      # format every YAML file Git does not ignore
 homelab-fmt --check              # list files that need formatting
 homelab-fmt a.yaml b.md          # format only these; non-YAML paths are skipped
+homelab-fmt apps/                # recursively format YAML in a directory
+homelab-fmt .                    # explicit recursive search, also outside Git
 homelab-fmt explain a.yaml       # show the template and rule for each mapping
+homelab-fmt explain apps/        # explain YAML files in a directory
 ```
+
+Without paths, Git must be available and the current directory must be in a
+Git worktree. Outside Git, pass explicit files or directories. Directory
+arguments inside Git respect ignored paths and nested repository boundaries;
+explicit files can be ignored by Git. Searches never follow symbolic links.
+Overlapping arguments are deduplicated and processed in path order. Missing
+paths and discovery failures return exit status 3.
 
 Runs without paths summarize changed files, reordered mappings, blank lines
 added or removed, warnings and errors. Check mode reports the edits it would
