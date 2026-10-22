@@ -31,17 +31,33 @@ type Result struct {
 // picks the rules for one document.
 type RulesFor func(doc *yaml.Node) []rules.Rule
 
+type Options struct {
+	// SOPSStatus overrides the filename/content heuristics with an authoritative
+	// encryption status resolved by the caller. Nil retains the heuristics.
+	SOPSStatus *bool
+}
+
 var sopsKey = regexp.MustCompile(`(?m)^sops:\s*$`)
 
-// SOPS files are never rewritten: their MAC covers the document structure.
+// IsSOPS reports whether the filename or content suggests SOPS encryption.
 func IsSOPS(path, text string) bool {
 	return strings.Contains(filepath.Base(path), ".sops.") || sopsKey.MatchString(text)
 }
 
+func isSOPS(path, text string, options []Options) bool {
+	encrypted := IsSOPS(path, text)
+	for _, option := range options {
+		if option.SOPSStatus != nil {
+			encrypted = *option.SOPSStatus
+		}
+	}
+	return encrypted
+}
+
 // applies rulesFor's rules to every document. Fails rather than return output
 // that parses to different data.
-func Format(path, text string, rulesFor RulesFor) (Result, error) {
-	if IsSOPS(path, text) {
+func Format(path, text string, rulesFor RulesFor, options ...Options) (Result, error) {
+	if isSOPS(path, text, options) {
 		return Result{Output: text}, nil
 	}
 	crlf := strings.Contains(text, "\r\n")

@@ -13,7 +13,7 @@ func processFile(file, full string, check bool) (format.Result, error) {
 	if err != nil {
 		return format.Result{}, err
 	}
-	result, err := format.Format(file, string(data), templates.For)
+	result, err := format.Format(file, string(data), templates.For, sopsOptions(full, string(data), fileStatus))
 	if err == nil && result.Changed && !check {
 		err = os.WriteFile(full, []byte(result.Output), 0o644)
 	}
