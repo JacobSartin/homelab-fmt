@@ -18,7 +18,7 @@ const (
 
 // how to order and space the mappings, or with Items the list items, found at Path.
 type Rule struct {
-	Path       string   // dotted keys; "*" matches any key or list index, "" is the root
+	Path       string   // PathString-encoded keys; "*" matches any key or list index, "" is the root
 	Items      bool     // spaces the items of a list; only Spacing applies
 	Order      []string // keys moved to the front, in this order
 	SortRest   bool     // sort unlisted keys instead of keeping their order
@@ -55,7 +55,25 @@ func (r Rule) Summarize() string {
 	return fmt.Sprintf("%s (%s)", strings.Join(parts, "; "), r.Source)
 }
 
-// reports whether pattern matches the key path.
+// PathString joins keys with dots, escaping tildes as ~0 and dots as ~1.
+// An empty key becomes ~2, distinct from the empty path used for the root.
+// A "*" segment retains its meaning as a wildcard in rule patterns.
+func PathString(path []string) string {
+	parts := make([]string, len(path))
+	for i, key := range path {
+		parts[i] = pathKey(key)
+	}
+	return strings.Join(parts, ".")
+}
+
+func pathKey(key string) string {
+	if key == "" {
+		return "~2"
+	}
+	return strings.ReplaceAll(strings.ReplaceAll(key, "~", "~0"), ".", "~1")
+}
+
+// reports whether a PathString-encoded pattern matches the key path.
 func Match(pattern string, path []string) bool {
 	var parts []string
 	if pattern != "" {
@@ -65,7 +83,7 @@ func Match(pattern string, path []string) bool {
 		return false
 	}
 	for i, part := range parts {
-		if part != "*" && part != path[i] {
+		if part != "*" && part != pathKey(path[i]) {
 			return false
 		}
 	}

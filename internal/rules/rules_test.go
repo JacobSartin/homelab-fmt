@@ -16,9 +16,34 @@ func TestMatch(t *testing.T) {
 		{"", []string{"a"}, false},
 		{"a.*.c", []string{"a", "b", "c"}, true},
 		{"a.*.c", []string{"a", "c"}, false},
+		{"data.config~1yaml", []string{"data", "config.yaml"}, true},
+		{"data.config~1yaml", []string{"data", "config", "yaml"}, false},
+		{"data.config.yaml", []string{"data", "config.yaml"}, false},
+		{"data.config~01yaml", []string{"data", "config~1yaml"}, true},
+		{"data.*", []string{"data", "config.yaml"}, true},
+		{"~2", []string{""}, true},
+		{"~2", nil, false},
+		{"", []string{""}, false},
 	} {
 		if got := Match(tc.pattern, tc.path); got != tc.want {
 			t.Errorf("Match(%q, %q) = %v", tc.pattern, tc.path, got)
+		}
+	}
+}
+
+func TestPathString(t *testing.T) {
+	for _, tc := range []struct {
+		path []string
+		want string
+	}{
+		{nil, ""},
+		{[]string{"a", "b"}, "a.b"},
+		{[]string{"a.b"}, "a~1b"},
+		{[]string{"a~1b"}, "a~01b"},
+		{[]string{"", "~2", "*"}, "~2.~02.*"},
+	} {
+		if got := PathString(tc.path); got != tc.want {
+			t.Errorf("PathString(%q) = %q; want %q", tc.path, got, tc.want)
 		}
 	}
 }

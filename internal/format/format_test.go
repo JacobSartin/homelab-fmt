@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"go.yaml.in/yaml/v3"
 
@@ -178,6 +179,62 @@ func TestAliasBeforeAnchorIsLeftUnsorted(t *testing.T) {
 	}
 }
 
+func TestBlockedLiteralPathDoesNotBlockNestedPath(t *testing.T) {
+	in := "config.yaml:\n  b: &value 1\n  a: *value\nconfig:\n  yaml:\n    b: 2\n    a: 3\n"
+	want := "config.yaml:\n  b: &value 1\n  a: *value\nconfig:\n  yaml:\n    a: 3\n    b: 2\n"
+	result, err := Format("x.yaml", in, with(
+		rules.Rule{Path: rules.PathString([]string{"config.yaml"}), SortRest: true},
+		rules.Rule{Path: rules.PathString([]string{"config", "yaml"}), SortRest: true},
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Output != want || len(result.Warnings) != 1 {
+		t.Errorf("output = %q, warnings = %q; want %q and one warning", result.Output, result.Warnings, want)
+	}
+}
+
+func TestTemplateLiteralPathKeys(t *testing.T) {
+	const template = `apiVersion: example.com/v1
+kind: Config
+data:
+  config.yaml:
+    b: 1
+    a: 2
+  config:
+    yaml:
+      a: 3
+      b: 4
+  "config~1yaml":
+    c: 5
+    b: 6
+  "":
+    y: 7
+    x: 8
+`
+	set, err := templates.Load(fstest.MapFS{"literal.yaml": &fstest.MapFile{Data: []byte(template)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shuffled := reverseMappings(t, template)
+	result, err := Format("x.yaml", shuffled, with(set.Templates()[0].Rules...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Output != template {
+		t.Errorf("got:\n%s\nwant:\n%s", result.Output, template)
+	}
+	explanation, err := Explain("x.yaml", template, set)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"data.config~1yaml:", "data.config.yaml:", "data.config~01yaml:", "data.~2:"} {
+		if !strings.Contains(explanation, path) {
+			t.Errorf("missing path %q in:\n%s", path, explanation)
+		}
+	}
+}
+
 func TestSOPSFilesAreNeverRewritten(t *testing.T) {
 	in := "kind: Secret\napiVersion: v1\nsops:\n    mac: x\n"
 	for _, path := range []string{"secret.sops.yaml", "secret.yaml"} {
@@ -260,7 +317,7 @@ func reverseMappings(t *testing.T, text string) string {
 		changed := false
 		for d, doc := range docs {
 			changed = walk(doc.Content[0], nil, func(node *yaml.Node, path []string) bool {
-				id := strconv.Itoa(d) + ":" + strings.Join(path, ".")
+				id := strconv.Itoa(d) + ":" + rules.PathString(path)
 				if done[id] {
 					return false
 				}

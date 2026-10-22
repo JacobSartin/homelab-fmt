@@ -52,6 +52,9 @@ Runs without paths summarize changed files, reordered mappings, blank lines
 added or removed, warnings and errors. Check mode reports the edits it would
 make; write mode counts only successful files. Rejected edits do not count.
 
+In `explain` paths, dots separate keys. Within a key, `~0` represents a tilde,
+`~1` a literal dot, and `~2` an empty key; `(root)` is the document root.
+
 | Exit status | Meaning |
 | --- | --- |
 | 0 | Done; with `--check`, nothing needs formatting |
