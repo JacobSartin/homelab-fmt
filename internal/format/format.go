@@ -8,6 +8,7 @@ package format
 import (
 	"errors"
 	"io"
+	"math"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -102,7 +103,7 @@ func Format(path, text string, rulesFor RulesFor, options ...Options) (Result, e
 		result.Changed = true
 	}
 	after, err := decode(src)
-	if err != nil || !reflect.DeepEqual(before, after) {
+	if err != nil || !sameData(before, after) {
 		return Result{}, errors.New("formatting would change the parsed data")
 	}
 	if crlf {
@@ -137,6 +138,53 @@ func decode(text string) ([]any, error) {
 			return nil, err
 		}
 		values = append(values, value)
+	}
+}
+
+// compares decoded YAML recursively, treating two NaN values as the same data.
+// reflect.DeepEqual alone rejects unchanged YAML containing .nan.
+func sameData(a, b any) bool {
+	switch x := a.(type) {
+	case float64:
+		y, ok := b.(float64)
+		return ok && (x == y || math.IsNaN(x) && math.IsNaN(y))
+	case []any:
+		y, ok := b.([]any)
+		if !ok || len(x) != len(y) || (x == nil) != (y == nil) {
+			return false
+		}
+		for i, v := range x {
+			if !sameData(v, y[i]) {
+				return false
+			}
+		}
+		return true
+	case map[string]any:
+		y, ok := b.(map[string]any)
+		if !ok || len(x) != len(y) || (x == nil) != (y == nil) {
+			return false
+		}
+		for k, v := range x {
+			other, exists := y[k]
+			if !exists || !sameData(v, other) {
+				return false
+			}
+		}
+		return true
+	case map[any]any:
+		y, ok := b.(map[any]any)
+		if !ok || len(x) != len(y) || (x == nil) != (y == nil) {
+			return false
+		}
+		for k, v := range x {
+			other, exists := y[k]
+			if !exists || !sameData(v, other) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(a, b)
 	}
 }
 
