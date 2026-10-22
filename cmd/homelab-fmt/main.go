@@ -11,7 +11,6 @@ import (
 
 	"github.com/JacobSartin/homelab-fmt/internal/files"
 	"github.com/JacobSartin/homelab-fmt/internal/format"
-	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 // set by the release build.
@@ -82,55 +81,42 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	// TODO(#2): track affected files the same way in check and write mode so
-	// both can report edit statistics.
-	errored, unformatted, changed := false, false, 0
+	changed, warnings, failed := 0, 0, 0
+	var stats format.Statistics
 	for _, file := range targets {
-		full := filepath.Join(root, file)
-		data, err := os.ReadFile(full)
+		result, err := processFile(file, filepath.Join(root, file), checkMode)
 		if err != nil {
-			fmt.Fprintln(stderr, err)
-			errored = true
-			continue
-		}
-		result, err := format.Format(file, string(data), templates.For)
-		if err != nil {
+			failed++
 			fmt.Fprintf(stderr, "%s: %v\n", file, err)
-			errored = true
-			continue
 		}
+		warnings += len(result.Warnings)
 		for _, warning := range result.Warnings {
 			fmt.Fprintf(stderr, "%s: %s\n", file, warning)
 		}
-		if !result.Changed {
+		if err != nil || !result.Changed {
 			continue
 		}
 		changed++
-		// Not an error: check mode reports through the exit status that files
-		// need formatting, so hooks and scripts can act on it.
+		stats.Add(result.Stats)
+		verb := "formatted"
 		if checkMode {
-			fmt.Fprintf(stdout, "needs formatting: %s\n", file)
-			unformatted = true
-			continue
+			verb = "needs formatting"
 		}
-		if err := os.WriteFile(full, []byte(result.Output), 0o644); err != nil {
-			fmt.Fprintln(stderr, err)
-			errored = true
-			continue
-		}
-		fmt.Fprintf(stdout, "formatted: %s\n", file)
+		fmt.Fprintf(stdout, "%s: %s\n", verb, file)
 	}
 	if len(paths) == 0 {
 		verb := "Formatted"
 		if checkMode {
 			verb = "Checked"
 		}
-		fmt.Fprintf(stdout, "%s %d files; %d changed.\n", verb, len(targets), changed)
+		fmt.Fprintf(stdout, "%s %d files; %d changed; %d mappings reordered; %d blank lines added, %d removed; %d warnings; %d errors.\n",
+			verb, len(targets), changed, stats.MappingsReordered,
+			stats.BlankLinesAdded, stats.BlankLinesRemoved, warnings, failed)
 	}
 	switch {
-	case errored:
+	case failed > 0:
 		return exitRuntime
-	case unformatted:
+	case checkMode && changed > 0:
 		return exitUnformatted
 	}
 	return exitOK

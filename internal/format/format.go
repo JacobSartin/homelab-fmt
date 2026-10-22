@@ -25,6 +25,7 @@ type Result struct {
 	Output   string
 	Changed  bool
 	Warnings []string
+	Stats    Statistics
 }
 
 // picks the rules for one document.
@@ -51,6 +52,7 @@ func Format(path, text string, rulesFor RulesFor) (Result, error) {
 	}
 	result := Result{}
 	blocked := map[string]bool{}
+	reordered := map[string]bool{}
 	// Each pass fixes the first mapping that breaks a rule and re-parses, so
 	// line numbers are always current.
 	for pass := 0; ; pass++ {
@@ -75,6 +77,11 @@ func Format(path, text string, rulesFor RulesFor) (Result, error) {
 				next.path+": left unsorted because an alias would come before its anchor")
 			continue
 		}
+		if next.moves && !reordered[next.mapping] {
+			result.Stats.MappingsReordered++
+			reordered[next.mapping] = true
+		}
+		result.Stats.Add(next.stats)
 		src = next.text
 		result.Changed = true
 	}
@@ -155,6 +162,7 @@ type edit struct {
 	path    string
 	mapping string // document index and key path
 	moves   bool
+	stats   Statistics
 }
 
 func nextEdit(text string, docs []*yaml.Node, rulesFor RulesFor, blocked map[string]bool) (edit, bool) {
@@ -227,7 +235,7 @@ func fix(lines []string, node *yaml.Node, path []string, rule rules.Rule, top, b
 		return edit{}, false
 	}
 	text := strings.Join(m.Replace(lines, m.Render(lines, keys, spaced)), "\n")
-	return edit{text: text, path: pathName(path)}, true
+	return edit{text: text, path: pathName(path), stats: spacingStats(gaps, spaced)}, true
 }
 
 // the edit that spaces a list's items by its rule, if it needs one.
@@ -250,5 +258,5 @@ func fixItems(lines []string, node *yaml.Node, path []string, rule rules.Rule) (
 		return edit{}, false
 	}
 	text := strings.Join(m.Replace(lines, m.Space(lines, spaced)), "\n")
-	return edit{text: text, path: pathName(path)}, true
+	return edit{text: text, path: pathName(path), stats: spacingStats(gaps, spaced)}, true
 }
