@@ -218,7 +218,7 @@ func pathName(path []string) string {
 	if len(path) == 0 {
 		return "(root)"
 	}
-	return strings.Join(path, ".")
+	return rules.PathString(path)
 }
 
 type edit struct {
@@ -247,7 +247,7 @@ func nextEdit(text string, docs []*yaml.Node, rulesFor RulesFor, blocked map[str
 				found, ok = fixItems(lines, node, path, rule)
 				return ok
 			}
-			id := strconv.Itoa(d) + ":" + strings.Join(path, ".")
+			id := strconv.Itoa(d) + ":" + rules.PathString(path)
 			found, ok = fix(lines, node, path, rule, node == doc.Content[0], blocked[id])
 			found.mapping = id
 			return ok

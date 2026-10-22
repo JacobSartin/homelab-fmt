@@ -25,7 +25,7 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 		}
 		if spacing := spacingOf(flags); spacing != rules.Keep {
 			t.own = append(t.own, rules.Rule{
-				Path: strings.Join(path, "."), Items: true, Spacing: spacing,
+				Path: rules.PathString(path), Items: true, Spacing: spacing,
 				Source: fmt.Sprintf("%s:%d", t.Name, line),
 			})
 		}
@@ -42,7 +42,7 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 	}
 
 	rule := rules.Rule{
-		Path: strings.Join(path, "."), SortRest: slices.Contains(flags, "sort"), Spacing: spacingOf(flags),
+		Path: rules.PathString(path), SortRest: slices.Contains(flags, "sort"), Spacing: spacingOf(flags),
 		Source: fmt.Sprintf("%s:%d", t.Name, line),
 	}
 	for i := 0; i+1 < len(node.Content); i += 2 {
