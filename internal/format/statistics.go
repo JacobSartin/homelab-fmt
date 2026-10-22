@@ -10,6 +10,13 @@ type Statistics struct {
 	BlankLinesRemoved int
 }
 
+// Add accumulates accepted edit counts in the same statistics representation.
+func (s *Statistics) Add(other Statistics) {
+	s.MappingsReordered += other.MappingsReordered
+	s.BlankLinesAdded += other.BlankLinesAdded
+	s.BlankLinesRemoved += other.BlankLinesRemoved
+}
+
 func spacingStats(before, after [][]string) Statistics {
 	var stats Statistics
 	for i := range before {

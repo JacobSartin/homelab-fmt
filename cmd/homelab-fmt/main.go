@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/JacobSartin/homelab-fmt/internal/files"
+	"github.com/JacobSartin/homelab-fmt/internal/format"
 )
 
 // set by the release build.
@@ -80,38 +81,42 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	var outcomes []fileOutcome
+	changed, warnings, failed := 0, 0, 0
+	var stats format.Statistics
 	for _, file := range targets {
-		outcome := processFile(file, filepath.Join(root, file), checkMode)
-		outcomes = append(outcomes, outcome)
-		if outcome.err != nil {
-			fmt.Fprintf(stderr, "%s: %v\n", file, outcome.err)
+		result, err := processFile(file, filepath.Join(root, file), checkMode)
+		if err != nil {
+			failed++
+			fmt.Fprintf(stderr, "%s: %v\n", file, err)
 		}
-		for _, warning := range outcome.result.Warnings {
+		warnings += len(result.Warnings)
+		for _, warning := range result.Warnings {
 			fmt.Fprintf(stderr, "%s: %s\n", file, warning)
 		}
-		if outcome.err == nil && outcome.result.Changed {
-			verb := "formatted"
-			if checkMode {
-				verb = "needs formatting"
-			}
-			fmt.Fprintf(stdout, "%s: %s\n", verb, file)
+		if err != nil || !result.Changed {
+			continue
 		}
+		changed++
+		stats.Add(result.Stats)
+		verb := "formatted"
+		if checkMode {
+			verb = "needs formatting"
+		}
+		fmt.Fprintf(stdout, "%s: %s\n", verb, file)
 	}
-	summary := summarize(outcomes)
 	if len(paths) == 0 {
 		verb := "Formatted"
 		if checkMode {
 			verb = "Checked"
 		}
 		fmt.Fprintf(stdout, "%s %d files; %d changed; %d mappings reordered; %d blank lines added, %d removed; %d warnings; %d errors.\n",
-			verb, len(outcomes), summary.changed, summary.stats.MappingsReordered,
-			summary.stats.BlankLinesAdded, summary.stats.BlankLinesRemoved, summary.warnings, summary.errors)
+			verb, len(targets), changed, stats.MappingsReordered,
+			stats.BlankLinesAdded, stats.BlankLinesRemoved, warnings, failed)
 	}
 	switch {
-	case summary.errors > 0:
+	case failed > 0:
 		return exitRuntime
-	case checkMode && summary.changed > 0:
+	case checkMode && changed > 0:
 		return exitUnformatted
 	}
 	return exitOK

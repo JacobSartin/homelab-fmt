@@ -81,8 +81,7 @@ func Format(path, text string, rulesFor RulesFor) (Result, error) {
 			result.Stats.MappingsReordered++
 			reordered[next.mapping] = true
 		}
-		result.Stats.BlankLinesAdded += next.stats.BlankLinesAdded
-		result.Stats.BlankLinesRemoved += next.stats.BlankLinesRemoved
+		result.Stats.Add(next.stats)
 		src = next.text
 		result.Changed = true
 	}
