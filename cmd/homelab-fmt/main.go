@@ -11,14 +11,13 @@ import (
 
 	"github.com/JacobSartin/homelab-fmt/internal/files"
 	"github.com/JacobSartin/homelab-fmt/internal/format"
-	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 // set by the release build.
 var version = "dev"
 
-const usage = `Usage: homelab-fmt [--check] [path...]
-       homelab-fmt explain path...
+const usage = `Usage: homelab-fmt [--check] [--templates DIR] [path...]
+       homelab-fmt explain [--templates DIR] path...
 
 Orders keys and blank lines in app-template values and Kubernetes manifests.
 Without paths, formats every YAML file Git does not ignore. Paths that are not
@@ -46,8 +45,9 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
-	if len(args) > 0 && args[0] == "explain" {
-		return explain(args[1:], stdout, stderr)
+	explainMode := len(args) > 0 && args[0] == "explain"
+	if explainMode {
+		args = args[1:]
 	}
 	flags := flag.NewFlagSet("homelab-fmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -56,8 +56,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		flags.PrintDefaults()
 	}
 	var checkMode, showVersion bool
+	var templatePath string
 	flags.BoolVar(&checkMode, "check", false, "report files that need formatting instead of writing them")
 	flags.BoolVar(&showVersion, "version", false, "print the version")
+	flags.StringVar(&templatePath, "templates", "", "template directory (overrides HOMELAB_FMT_TEMPLATES and repository defaults)")
 	if err := flags.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			return exitOK
@@ -68,14 +70,21 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, version)
 		return exitOK
 	}
-	warnTemplates(stderr)
+	paths := flags.Args()
+	if !explainMode && len(paths) > 0 && paths[0] == "explain" {
+		explainMode, paths = true, paths[1:]
+	}
+	if explainMode {
+		return explain(paths, templatePath, stdout, stderr)
+	}
 
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return exitRuntime
 	}
-	paths := flags.Args()
+	set, templateDir, diagnostics := loadTemplates(root, templatePath)
+	warnTemplates(stderr, diagnostics)
 	var targets []string
 	if len(paths) == 0 {
 		targets, err = files.Discover(root)
@@ -87,10 +96,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitRuntime
 	}
 
-	changed, warnings, failed := 0, 0, 0
+	targets = withoutTemplates(root, templateDir, targets)
+
+	changed, warnings, failed := 0, len(diagnostics), 0
 	var stats format.Statistics
 	for _, file := range targets {
-		result, err := processFile(file, filepath.Join(root, file), checkMode)
+		result, err := processFile(file, filepath.Join(root, file), checkMode, set.For)
 		if err != nil {
 			failed++
 			fmt.Fprintf(stderr, "%s: %v\n", file, err)
@@ -128,8 +139,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return exitOK
 }
 
-func warnTemplates(stderr io.Writer) {
-	for _, err := range templates.DefaultErrors {
+func warnTemplates(stderr io.Writer, diagnostics []error) {
+	for _, err := range diagnostics {
 		fmt.Fprintf(stderr, "warning: %v\n", err)
 	}
 }

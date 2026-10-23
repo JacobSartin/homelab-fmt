@@ -8,9 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 func TestSummaryInBothModes(t *testing.T) {
+	t.Setenv("HOMELAB_FMT_TEMPLATES", "")
 	for _, check := range []bool{true, false} {
 		t.Run(map[bool]string{true: "check", false: "write"}[check], func(t *testing.T) {
 			dir := t.TempDir()
@@ -47,7 +50,7 @@ func TestSummaryInBothModes(t *testing.T) {
 }
 
 func TestFailedReadReturnsError(t *testing.T) {
-	result, err := processFile("missing.yaml", filepath.Join(t.TempDir(), "missing.yaml"), false)
+	result, err := processFile("missing.yaml", filepath.Join(t.TempDir(), "missing.yaml"), false, templates.For)
 	if err == nil || result.Changed {
 		t.Errorf("result = %+v, error = %v; expected a read error without changes", result, err)
 	}
@@ -66,7 +69,7 @@ func TestWriteFailureReturnsFormattingResult(t *testing.T) {
 			t.Errorf("write = %q, %q", got, data)
 		}
 		return failure
-	})
+	}, templates.For)
 	if !errors.Is(err, failure) || !result.Changed || result.Stats.MappingsReordered != 1 {
 		t.Errorf("result = %+v, error = %v", result, err)
 	}

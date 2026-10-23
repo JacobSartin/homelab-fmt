@@ -13,6 +13,7 @@ import (
 )
 
 func TestExitCodes(t *testing.T) {
+	t.Setenv("HOMELAB_FMT_TEMPLATES", "")
 	dir := t.TempDir()
 	write := func(name, text string) {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
@@ -47,6 +48,7 @@ func TestExitCodes(t *testing.T) {
 }
 
 func TestDirectoryArguments(t *testing.T) {
+	t.Setenv("HOMELAB_FMT_TEMPLATES", "")
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.yaml"), []byte("kind: ConfigMap\napiVersion: v1\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -63,6 +65,7 @@ func TestDirectoryArguments(t *testing.T) {
 }
 
 func TestTemplateWarningsContinueBothCommands(t *testing.T) {
+	t.Setenv("HOMELAB_FMT_TEMPLATES", "")
 	t.Chdir(t.TempDir())
 	if err := os.WriteFile("valid.yaml", []byte("apiVersion: v1\nkind: ConfigMap\n"), 0o644); err != nil {
 		t.Fatal(err)
