@@ -229,6 +229,9 @@ func TestTemplateDiagnosticLocations(t *testing.T) {
 		{"# heading\n# homelab-fmt: extends absent.yaml\napiVersion: v1\nkind: A\n", "t.yaml:2:", "unknown template"},
 		{"apiVersion: v1\nkind: A\n---\nb: [\n", "t.yaml:4:", "expected"},
 		{"apiVersion: v1\nkind: A\nkind: B\n", "t.yaml:3:", "mapping key"},
+		{"apiVersion: v1\nkind: A\nmetadata:\n  # homelab-fmt: unsupported\n  labels: {}\n", "t.yaml:4:", "unknown directive"},
+		{"apiVersion: v1\nkind: A\nmetadata:\n  labels: # homelab-fmt: sort\n    - a\n", "t.yaml:4:", "sort applies to mappings"},
+		{"apiVersion: v1\nkind: A\nmetadata:\n  labels: # homelab-fmt: sort\n    value\n", "t.yaml:4:", "directives apply to mappings"},
 	} {
 		set, diagnostics := load(map[string]string{"t.yaml": tc.text})
 		if len(set.Templates()) != 0 || len(diagnostics) != 1 {
@@ -237,6 +240,17 @@ func TestTemplateDiagnosticLocations(t *testing.T) {
 		if got := diagnostics[0].Error(); !strings.Contains(got, tc.location) || !strings.Contains(got, tc.reason) {
 			t.Errorf("diagnostic = %q, want %q and %q", got, tc.location, tc.reason)
 		}
+	}
+}
+
+func TestHeadDirectiveSource(t *testing.T) {
+	set := mustLoad(t, map[string]string{"t.yaml": "apiVersion: v1\nkind: A\nmetadata:\n  # homelab-fmt: sort\n\n  labels: {}\n"})
+	if source := ruleAt(t, set.Templates()[0], "metadata.labels").Source; source != "t.yaml:4" {
+		t.Errorf("source = %q, want directive line t.yaml:4", source)
+	}
+	set = mustLoad(t, map[string]string{"t.yaml": "apiVersion: v1\nkind: A\nmetadata: # homelab-fmt: compact\n  # homelab-fmt: compact\n  labels: {}\n"})
+	if source := ruleAt(t, set.Templates()[0], "metadata").Source; source != "t.yaml:3" {
+		t.Errorf("source = %q, want parent directive line t.yaml:3", source)
 	}
 }
 
