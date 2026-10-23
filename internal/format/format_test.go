@@ -212,9 +212,9 @@ data:
     y: 7
     x: 8
 `
-	set, err := templates.Load(fstest.MapFS{"literal.yaml": &fstest.MapFile{Data: []byte(template)}})
-	if err != nil {
-		t.Fatal(err)
+	set, diagnostics := templates.Load(fstest.MapFS{"literal.yaml": &fstest.MapFile{Data: []byte(template)}})
+	if len(diagnostics) != 0 {
+		t.Fatal(diagnostics)
 	}
 	shuffled := reverseMappings(t, template)
 	result, err := Format("x.yaml", shuffled, with(set.Templates()[0].Rules...))

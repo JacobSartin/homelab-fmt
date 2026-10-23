@@ -2,10 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 func TestExitCodes(t *testing.T) {
@@ -55,5 +59,24 @@ func TestDirectoryArguments(t *testing.T) {
 	output.Reset()
 	if got := run([]string{"explain", "."}, &output, io.Discard); got != exitOK || !bytes.Contains(output.Bytes(), []byte("a.yaml")) {
 		t.Errorf("directory explain exit %d, output %q", got, output.String())
+	}
+}
+
+func TestTemplateWarningsContinueBothCommands(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.WriteFile("valid.yaml", []byte("apiVersion: v1\nkind: ConfigMap\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	saved := templates.DefaultErrors
+	t.Cleanup(func() { templates.DefaultErrors = saved })
+	templates.DefaultErrors = []error{errors.New("template broken.yaml:3: invalid directive; skipped; matching documents fall back")}
+	for _, args := range [][]string{{"--check", "valid.yaml"}, {"explain", "valid.yaml"}} {
+		var stderr bytes.Buffer
+		if got := run(args, io.Discard, &stderr); got != exitOK {
+			t.Errorf("%v: exit = %d", args, got)
+		}
+		if got := stderr.String(); !strings.HasPrefix(got, "warning: template broken.yaml:3:") || !strings.Contains(got, "fall back") {
+			t.Errorf("%v: warnings = %q", args, got)
+		}
 	}
 }

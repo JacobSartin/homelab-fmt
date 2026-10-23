@@ -9,20 +9,23 @@ import (
 )
 
 // fills t.Chain and t.Rules from t and the templates it extends.
-func (s *Set) resolve(t *Template, seen []string) error {
+func (s *Set) resolve(t *Template, seen []string, invalid map[string]bool) error {
 	if slices.Contains(seen, t.Name) {
-		return fmt.Errorf("extends cycle: %s", strings.Join(append(seen, t.Name), " -> "))
+		return fmt.Errorf("line %d: extends cycle: %s", t.extendsLine, strings.Join(append(seen, t.Name), " -> "))
 	}
 	t.Chain = []string{t.Name}
 	t.Rules = slices.Clone(t.own)
 	if t.Extends != "" {
+		if invalid[t.Extends] {
+			return fmt.Errorf("line %d: extends invalid template %s", t.extendsLine, t.Extends)
+		}
 		i := slices.IndexFunc(s.templates, func(p *Template) bool { return p.Name == t.Extends })
 		if i < 0 {
-			return fmt.Errorf("extends unknown template %s", t.Extends)
+			return fmt.Errorf("line %d: extends unknown template %s", t.extendsLine, t.Extends)
 		}
 		parent := s.templates[i]
-		if err := s.resolve(parent, append(seen, t.Name)); err != nil {
-			return err
+		if err := s.resolve(parent, append(seen, t.Name), invalid); err != nil {
+			return fmt.Errorf("line %d: extends %s: %w", t.extendsLine, parent.Name, err)
 		}
 		t.Chain = append(t.Chain, parent.Chain...)
 		t.Rules = merge(t.own, parent.Rules)
