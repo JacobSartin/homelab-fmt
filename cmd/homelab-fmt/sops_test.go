@@ -65,7 +65,7 @@ func TestSOPSStatus(t *testing.T) {
 				if got := strings.Contains(explanation, "SOPS file"); got != tc.encrypted {
 					t.Errorf("%s: encrypted = %v, explanation = %q", path, tc.encrypted, explanation)
 				}
-				if !tc.encrypted && !strings.Contains(explanation, "template kubernetes.yaml") {
+				if !tc.encrypted && !strings.Contains(explanation, "template bundled/kubernetes.yaml") {
 					t.Errorf("%s: missing template explanation: %s", path, explanation)
 				}
 			}

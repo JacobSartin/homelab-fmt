@@ -11,7 +11,7 @@ import (
 
 // reads one template's header directives and compiles its rules; extends
 // chains are resolved later, once every template is parsed.
-func parse(name, text string) (*Template, error) {
+func parse(name, source, text string) (*Template, error) {
 	dec := yaml.NewDecoder(strings.NewReader(text))
 	var doc yaml.Node
 	if err := dec.Decode(&doc); err != nil {
@@ -32,7 +32,7 @@ func parse(name, text string) (*Template, error) {
 	}
 	root := doc.Content[0]
 	lines := strings.Split(text, "\n")
-	t := &Template{Name: name, Text: text, line: root.Line}
+	t := &Template{Name: name, Source: source, Text: text, line: root.Line}
 	for i, line := range lines[:root.Line-1] {
 		for _, d := range directives(line) {
 			verb, arg, _ := strings.Cut(d, " ")
