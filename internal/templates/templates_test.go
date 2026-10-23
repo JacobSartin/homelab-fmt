@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	"github.com/JacobSartin/homelab-fmt/internal/rules"
 )
 
-func load(files map[string]string) (*Set, error) {
+func load(files map[string]string) (*Set, []error) {
 	fsys := fstest.MapFS{}
 	for name, text := range files {
 		fsys[name] = &fstest.MapFile{Data: []byte(text)}
@@ -22,8 +23,8 @@ func load(files map[string]string) (*Set, error) {
 func mustLoad(t *testing.T, files map[string]string) *Set {
 	t.Helper()
 	set, err := load(files)
-	if err != nil {
-		t.Fatal(err)
+	if len(err) > 0 {
+		t.Fatal(errors.Join(err...))
 	}
 	return set
 }
@@ -160,6 +161,8 @@ func TestLoadErrors(t *testing.T) {
 		"conflicting sort directives":       {"t.yaml": "apiVersion: v1\nkind: A\nx: {} # homelab-fmt: sort, sort size-desc\n"},
 		"apiVersion and kind":               {"t.yaml": "a: 1\n"},
 		"one document":                      {"t.yaml": "apiVersion: v1\nkind: A\n---\nb: 1\n"},
+		"requires an argument":              {"t.yaml": "# homelab-fmt: extends\napiVersion: v1\nkind: A\n"},
+		"mapping key":                       {"t.yaml": "apiVersion: v1\nkind: A\nkind: B\n"},
 		"unknown template":                  {"t.yaml": "# homelab-fmt: extends nope.yaml\napiVersion: v1\nkind: A\n"},
 		"extends cycle": {
 			"a.yaml": "# homelab-fmt: extends b.yaml\napiVersion: v1\nkind: A\n",
@@ -170,36 +173,69 @@ func TestLoadErrors(t *testing.T) {
 			"b.yaml": "apiVersion: v1\nkind: A\n",
 		},
 	} {
-		if _, err := load(files); err == nil || !strings.Contains(err.Error(), want) {
+		if _, err := load(files); len(err) == 0 || !strings.Contains(errors.Join(err...).Error(), want) {
 			t.Errorf("want error containing %q, got %v", want, err)
-		}
-	}
-}
-
-func TestSortModesCompileAndLayer(t *testing.T) {
-	for directive, mode := range map[string]rules.SortMode{
-		"": rules.SizeDescending, "sort": rules.SizeAscending, "sort size-asc": rules.SizeAscending,
-		"sort size-desc": rules.SizeDescending, "sort alphabetical": rules.Alphabetical,
-	} {
-		comment := ""
-		if directive != "" {
-			comment = " # homelab-fmt: " + directive
-		}
-		set := mustLoad(t, map[string]string{
-			"base.yaml":  "apiVersion: v1\nkind: Base\nmetadata: {} # homelab-fmt: sort size-desc\n",
-			"child.yaml": "# homelab-fmt: extends base.yaml\napiVersion: v1\nkind: Child\nmetadata:" + comment + "\n  name: x\n",
-		})
-		if r := ruleAt(t, set.Templates()[1], "metadata"); !r.SortRest || r.SortMode != mode {
-			t.Errorf("%q: rule %+v, want mode %d", directive, r, mode)
 		}
 	}
 }
 
 // Every bundled template must load and select documents like itself.
 func TestBundledTemplates(t *testing.T) {
+	if len(DefaultErrors) > 0 {
+		t.Fatal(errors.Join(DefaultErrors...))
+	}
 	for _, tmpl := range Default.Templates() {
 		if got := Default.Match(parseDoc(t, tmpl.Text)); got != tmpl {
 			t.Errorf("%s matches template %v", tmpl.Name, got)
+		}
+	}
+}
+
+func TestLoadKeepsValidTemplates(t *testing.T) {
+	set, diagnostics := load(map[string]string{
+		"any.yaml":             "apiVersion: \"*\"\nkind: \"*\"\n",
+		"broken.yaml":          "apiVersion: apps/v1\nkind: Deployment\nx: {} # homelab-fmt: alphabetize\n",
+		"child.yaml":           "# homelab-fmt: extends broken.yaml\napiVersion: apps/v1\nkind: StatefulSet\n",
+		"cycle-a.yaml":         "# homelab-fmt: extends cycle-b.yaml\napiVersion: v1\nkind: A\n",
+		"cycle-b.yaml":         "# homelab-fmt: extends cycle-a.yaml\napiVersion: v1\nkind: B\n",
+		"duplicate.yaml":       "apiVersion: v1\nkind: D\n",
+		"duplicate-child.yaml": "# homelab-fmt: extends duplicate.yaml\napiVersion: v1\nkind: C\n",
+		"same.yaml":            "apiVersion: v1\nkind: D\n",
+		"valid.yaml":           "apiVersion: v1\nkind: Secret\n",
+	})
+	if len(set.Templates()) != 2 || set.Templates()[0].Name != "any.yaml" || set.Templates()[1].Name != "valid.yaml" {
+		t.Fatalf("valid templates = %v", set.Templates())
+	}
+	if len(diagnostics) != 7 {
+		t.Fatalf("diagnostics = %v", diagnostics)
+	}
+	for _, err := range diagnostics {
+		if !strings.Contains(err.Error(), "fall back to the next most specific") {
+			t.Errorf("missing fallback explanation: %v", err)
+		}
+	}
+	if got := set.Match(parseDoc(t, "apiVersion: apps/v1\nkind: Deployment\n")); got.Name != "any.yaml" {
+		t.Errorf("fallback = %s", got.Name)
+	}
+	if got := set.Match(parseDoc(t, "apiVersion: v1\nkind: Secret\n")); got.Name != "valid.yaml" {
+		t.Errorf("specific match = %s", got.Name)
+	}
+}
+
+func TestTemplateDiagnosticLocations(t *testing.T) {
+	for _, tc := range []struct{ text, location, reason string }{
+		{"# heading\n# homelab-fmt: unknown\napiVersion: v1\nkind: A\n", "t.yaml:2:", "unknown directive"},
+		{"# heading\n# homelab-fmt: schema\nx: 1\n", "t.yaml:2:", "requires an argument"},
+		{"# heading\n# homelab-fmt: extends absent.yaml\napiVersion: v1\nkind: A\n", "t.yaml:2:", "unknown template"},
+		{"apiVersion: v1\nkind: A\n---\nb: [\n", "t.yaml:4:", "expected"},
+		{"apiVersion: v1\nkind: A\nkind: B\n", "t.yaml:3:", "mapping key"},
+	} {
+		set, diagnostics := load(map[string]string{"t.yaml": tc.text})
+		if len(set.Templates()) != 0 || len(diagnostics) != 1 {
+			t.Fatalf("templates = %v, diagnostics = %v", set.Templates(), diagnostics)
+		}
+		if got := diagnostics[0].Error(); !strings.Contains(got, tc.location) || !strings.Contains(got, tc.reason) {
+			t.Errorf("diagnostic = %q, want %q and %q", got, tc.location, tc.reason)
 		}
 	}
 }
@@ -222,5 +258,24 @@ volumes:
 	rule := ruleAt(t, set.Templates()[0], "volumes.*")
 	if !slices.Equal(rule.Order, want) || !rule.SortRest || rule.SortMode != rules.SizeDescending {
 		t.Errorf("got %+v, want order %q with descending size sort", rule, want)
+	}
+}
+
+func TestSortModesCompileAndLayer(t *testing.T) {
+	for directive, mode := range map[string]rules.SortMode{
+		"": rules.SizeDescending, "sort": rules.SizeAscending, "sort size-asc": rules.SizeAscending,
+		"sort size-desc": rules.SizeDescending, "sort alphabetical": rules.Alphabetical,
+	} {
+		comment := ""
+		if directive != "" {
+			comment = " # homelab-fmt: " + directive
+		}
+		set := mustLoad(t, map[string]string{
+			"base.yaml":  "apiVersion: v1\nkind: Base\nmetadata: {} # homelab-fmt: sort size-desc\n",
+			"child.yaml": "# homelab-fmt: extends base.yaml\napiVersion: v1\nkind: Child\nmetadata:" + comment + "\n  name: x\n",
+		})
+		if r := ruleAt(t, set.Templates()[1], "metadata"); !r.SortRest || r.SortMode != mode {
+			t.Errorf("%q: rule %+v, want mode %d", directive, r, mode)
+		}
 	}
 }

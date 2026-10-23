@@ -11,6 +11,7 @@ import (
 
 	"github.com/JacobSartin/homelab-fmt/internal/files"
 	"github.com/JacobSartin/homelab-fmt/internal/format"
+	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
 // set by the release build.
@@ -67,6 +68,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, version)
 		return exitOK
 	}
+	warnTemplates(stderr)
 
 	root, err := os.Getwd()
 	if err != nil {
@@ -124,4 +126,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitUnformatted
 	}
 	return exitOK
+}
+
+func warnTemplates(stderr io.Writer) {
+	for _, err := range templates.DefaultErrors {
+		fmt.Fprintf(stderr, "warning: %v\n", err)
+	}
 }

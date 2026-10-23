@@ -16,6 +16,7 @@ func explain(paths []string, stdout, stderr io.Writer) int {
 		fmt.Fprint(stderr, usage)
 		return exitUsage
 	}
+	warnTemplates(stderr)
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(stderr, err)

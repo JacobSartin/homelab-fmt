@@ -126,6 +126,11 @@ schema, with a `yaml-language-server` modeline where one exists. Tests check
 that every template loads, selects itself, formats to itself and is restored
 after its mappings are shuffled.
 
+Invalid templates produce warnings with their filename, line and reason.
+They and any templates extending them are skipped. Documents fall back to the
+next most specific valid template, or stay unchanged when none matches.
+Templates with duplicate selectors are all skipped, along with their descendants.
+
 ## Installing in a consumer repository
 
 Releases publish binaries for Linux, macOS and Windows with build provenance

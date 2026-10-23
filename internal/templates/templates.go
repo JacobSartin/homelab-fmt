@@ -30,9 +30,10 @@ type Template struct {
 	Chain   []string     // this template, then the templates it extends
 	Rules   []rules.Rule // merged with the parents' rules
 
-	schema      *regexp.Regexp
-	group, kind string
-	own         []rules.Rule
+	schema            *regexp.Regexp
+	group, kind       string
+	own               []rules.Rule
+	line, extendsLine int
 }
 
 type Set struct {
@@ -44,17 +45,13 @@ func (s *Set) Templates() []*Template { return s.templates }
 //go:embed bundled/*.yaml
 var bundled embed.FS
 
-// The templates shipped in the binary.
-var Default = func() *Set {
+// The valid templates shipped in the binary and diagnostics for skipped ones.
+var Default, DefaultErrors = func() (*Set, []error) {
 	sub, err := fs.Sub(bundled, "bundled")
 	if err != nil {
-		panic(err)
+		return &Set{}, []error{err}
 	}
-	set, err := Load(sub)
-	if err != nil {
-		panic(err)
-	}
-	return set
+	return Load(sub)
 }()
 
 // rules of the bundled template that matches doc; none when nothing matches.
