@@ -33,6 +33,9 @@ How it edits:
   alias above its anchor.
 - The result must parse to the same data as the input, or the file is
   reported as an error and left unchanged.
+- Writes finish and sync a temporary file in the same directory before
+  replacing the original, preserving its permission bits. Failed replacements
+  preserve the original and remove the temporary file.
 
 ## Usage
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,5 +50,24 @@ func TestFailedReadReturnsError(t *testing.T) {
 	result, err := processFile("missing.yaml", filepath.Join(t.TempDir(), "missing.yaml"), false)
 	if err == nil || result.Changed {
 		t.Errorf("result = %+v, error = %v; expected a read error without changes", result, err)
+	}
+}
+
+func TestWriteFailureReturnsFormattingResult(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "manifest.yaml")
+	input := "kind: ConfigMap\napiVersion: v1\n"
+	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	failure := errors.New("write failed")
+	result, err := processFileWithWriter("manifest.yaml", path, false, func(got string, data []byte) error {
+		if got != path || string(data) != "apiVersion: v1\nkind: ConfigMap\n" {
+			t.Errorf("write = %q, %q", got, data)
+		}
+		return failure
+	})
+	if !errors.Is(err, failure) || !result.Changed || result.Stats.MappingsReordered != 1 {
+		t.Errorf("result = %+v, error = %v", result, err)
 	}
 }
