@@ -22,7 +22,7 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 	case yaml.MappingNode:
 	case yaml.SequenceNode:
 		if sorted {
-			return fmt.Errorf("line %d: sort applies to mappings", node.Line)
+			return fmt.Errorf("line %d: sort applies to mappings", line)
 		}
 		if spacing := spacingOf(flags); spacing != rules.Keep {
 			t.own = append(t.own, rules.Rule{
@@ -37,7 +37,7 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 		return t.compile(lines, item, append(slices.Clip(path), "*"), nil, item.Line)
 	default:
 		if len(flags) > 0 {
-			return fmt.Errorf("line %d: directives apply to mappings and lists", node.Line)
+			return fmt.Errorf("line %d: directives apply to mappings and lists", line)
 		}
 		return nil
 	}
@@ -85,31 +85,52 @@ func (t *Template) compile(lines []string, node *yaml.Node, path, flags []string
 func (t *Template) compilePair(lines []string, node *yaml.Node, i int, path []string) error {
 	key, value := node.Content[i], node.Content[i+1]
 	comments := []string{key.LineComment, value.LineComment, value.HeadComment}
+	commentLines := []int{key.Line, value.Line, value.Line}
 	// The first key's head comment is the template header.
 	if !(len(path) == 0 && i == 0) {
 		comments = append(comments, key.HeadComment)
+		commentLines = append(commentLines, key.Line)
 	}
 	var flags []string
-	for _, d := range directives(comments...) {
-		switch d {
-		case "sort", "sort alphabetical", "sort size-asc", "sort size-desc", "compact", "separate":
-			if strings.HasPrefix(d, "sort") {
-				before, hadSort := sortOf(flags)
-				after, _ := sortOf([]string{d})
-				if hadSort && before != after {
-					return fmt.Errorf("line %d: conflicting sort directives", key.Line)
-				}
+	source := key.Line
+	for i, comment := range comments {
+		for _, d := range directives(comment) {
+			line := directiveLine(lines, d, commentLines[i])
+			if len(flags) == 0 {
+				source = line
 			}
-			flags = append(flags, d)
-		default:
-			return fmt.Errorf("line %d: unknown directive %q", key.Line, d)
+			switch d {
+			case "sort", "sort alphabetical", "sort size-asc", "sort size-desc", "compact", "separate":
+				if strings.HasPrefix(d, "sort") {
+					before, hadSort := sortOf(flags)
+					after, _ := sortOf([]string{d})
+					if hadSort && before != after {
+						return fmt.Errorf("line %d: conflicting sort directives", line)
+					}
+				}
+				flags = append(flags, d)
+			default:
+				return fmt.Errorf("line %d: unknown directive %q", line, d)
+			}
 		}
 	}
 	segment := key.Value
 	if isWildcard(segment) {
 		segment = "*"
 	}
-	return t.compile(lines, value, append(slices.Clip(path), segment), flags, key.Line)
+	return t.compile(lines, value, append(slices.Clip(path), segment), flags, source)
+}
+
+// Find the actual comment line, including head comments separated by blanks.
+func directiveLine(lines []string, directive string, before int) int {
+	for i := min(before, len(lines)); i > 0; i-- {
+		for at, char := range lines[i-1] {
+			if char == '#' && slices.Contains(directives(lines[i-1][at:]), directive) {
+				return i
+			}
+		}
+	}
+	return max(1, before)
 }
 
 func sortOf(flags []string) (rules.SortMode, bool) {
