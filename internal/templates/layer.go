@@ -13,7 +13,7 @@ func (s *Set) resolve(t *Template, seen []string, invalid map[string]bool) error
 	if slices.Contains(seen, t.Name) {
 		return fmt.Errorf("line %d: extends cycle: %s", t.extendsLine, strings.Join(append(seen, t.Name), " -> "))
 	}
-	t.Chain = []string{t.Name}
+	t.Chain = []string{t.Source}
 	t.Rules = slices.Clone(t.own)
 	if t.Extends != "" {
 		if invalid[t.Extends] {

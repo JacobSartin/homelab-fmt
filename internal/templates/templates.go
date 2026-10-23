@@ -16,6 +16,7 @@ package templates
 import (
 	"embed"
 	"io/fs"
+	"os"
 	"regexp"
 
 	"go.yaml.in/yaml/v3"
@@ -25,9 +26,10 @@ import (
 
 type Template struct {
 	Name    string
+	Source  string // source filename; Name remains the identity used by extends
 	Text    string
 	Extends string
-	Chain   []string     // this template, then the templates it extends
+	Chain   []string     // source filenames of this template and its parents
 	Rules   []rules.Rule // merged with the parents' rules
 
 	schema            *regexp.Regexp
@@ -51,12 +53,27 @@ var Default, DefaultErrors = func() (*Set, []error) {
 	if err != nil {
 		return &Set{}, []error{err}
 	}
-	return Load(sub)
+	return LoadSources(Source{FS: sub, Name: "bundled"})
 }()
+
+// WithDirectory combines bundled templates with a directory. Files from the
+// directory replace bundled templates by filename before parsing and layering.
+func WithDirectory(path string) (*Set, []error) {
+	sub, err := fs.Sub(bundled, "bundled")
+	if err != nil {
+		return &Set{}, []error{err}
+	}
+	return LoadSources(Source{FS: sub, Name: "bundled"}, Source{FS: os.DirFS(path), Name: path})
+}
 
 // rules of the bundled template that matches doc; none when nothing matches.
 func For(doc *yaml.Node) []rules.Rule {
-	if t := Default.Match(doc); t != nil {
+	return Default.For(doc)
+}
+
+// For returns the selected template's rules, or none when nothing matches.
+func (s *Set) For(doc *yaml.Node) []rules.Rule {
+	if t := s.Match(doc); t != nil {
 		return t.Rules
 	}
 	return nil

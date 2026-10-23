@@ -3,35 +3,67 @@ package templates
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
 // Load reads *.yaml files and resolves extends chains. Invalid templates and
 // their descendants are skipped; the returned set is usable even with errors.
 func Load(fsys fs.FS) (*Set, []error) {
+	return LoadSources(Source{FS: fsys})
+}
+
+// Source supplies templates from an FS root. Name identifies their directory
+// in diagnostics and explanations; an empty Name keeps bare filenames.
+type Source struct {
+	FS   fs.FS
+	Name string
+}
+
+// LoadSources combines sources in order, replacing files with the same name.
+// Replacement happens before validation, so a bad override remains skipped.
+func LoadSources(sources ...Source) (*Set, []error) {
 	set := &Set{}
-	entries, err := fs.ReadDir(fsys, ".")
-	if err != nil {
-		return set, []error{diagnostic("templates", err)}
-	}
 	var diagnostics []error
+	type file struct {
+		source, text string
+		err          error
+	}
+	files := map[string]file{}
+	for _, source := range sources {
+		entries, err := fs.ReadDir(source.FS, ".")
+		if err != nil {
+			diagnostics = append(diagnostics, diagnostic(filepath.ToSlash(filepath.Join(source.Name, ".")), err))
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || !(strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml")) {
+				continue
+			}
+			data, err := fs.ReadFile(source.FS, name)
+			files[name] = file{source: filepath.ToSlash(filepath.Join(source.Name, name)), text: strings.ReplaceAll(string(data), "\r\n", "\n"), err: err}
+		}
+	}
 	invalid := map[string]bool{}
 	reject := func(name string, err error) {
 		invalid[name] = true
-		diagnostics = append(diagnostics, diagnostic(name, err))
+		diagnostics = append(diagnostics, diagnostic(files[name].source, err))
 	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".yaml") {
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	for _, name := range names {
+		file := files[name]
+		if file.err != nil {
+			reject(name, file.err)
 			continue
 		}
-		data, err := fs.ReadFile(fsys, name)
-		if err != nil {
-			reject(name, err)
-			continue
-		}
-		t, err := parse(name, strings.ReplaceAll(string(data), "\r\n", "\n"))
+		t, err := parse(name, file.source, file.text)
 		if err != nil {
 			reject(name, err)
 			continue
