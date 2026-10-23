@@ -8,25 +8,26 @@ import (
 
 	"github.com/JacobSartin/homelab-fmt/internal/files"
 	"github.com/JacobSartin/homelab-fmt/internal/format"
-	"github.com/JacobSartin/homelab-fmt/internal/templates"
 )
 
-func explain(paths []string, stdout, stderr io.Writer) int {
+func explain(paths []string, templatePath string, stdout, stderr io.Writer) int {
 	if len(paths) == 0 {
 		fmt.Fprint(stderr, usage)
 		return exitUsage
 	}
-	warnTemplates(stderr)
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return exitRuntime
 	}
+	set, templateDir, diagnostics := loadTemplates(root, templatePath)
+	warnTemplates(stderr, diagnostics)
 	targets, err := files.Select(root, paths)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return exitRuntime
 	}
+	targets = withoutTemplates(root, templateDir, targets)
 	errored := false
 	for _, file := range targets {
 		data, err := os.ReadFile(filepath.Join(root, file))
@@ -35,7 +36,7 @@ func explain(paths []string, stdout, stderr io.Writer) int {
 			errored = true
 			continue
 		}
-		text, err := format.Explain(file, string(data), templates.Default, sopsOptions(filepath.Join(root, file), string(data), fileStatus))
+		text, err := format.Explain(file, string(data), set, sopsOptions(filepath.Join(root, file), string(data), fileStatus))
 		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", file, err)
 			errored = true

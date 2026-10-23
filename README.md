@@ -47,6 +47,7 @@ homelab-fmt apps/                # recursively format YAML in a directory
 homelab-fmt .                    # explicit recursive search, also outside Git
 homelab-fmt explain a.yaml       # show the template and rule for each mapping
 homelab-fmt explain apps/        # explain YAML files in a directory
+homelab-fmt --templates ./templates a.yaml  # select a custom template directory
 ```
 
 Without paths, Git must be available and the current directory must be in a
@@ -71,6 +72,22 @@ In `explain` paths, dots separate keys. Within a key, `~0` represents a tilde,
 | 3 | Runtime error: a file could not be listed, read or written, is not valid YAML, or would change meaning. Wins over 1. |
 
 ## Templates
+
+User templates are loaded from `.homelab-fmt/templates` at the Git repository
+root, or in the current directory outside Git. `HOMELAB_FMT_TEMPLATES` selects
+a different directory; `--templates DIR` takes precedence over both. Relative
+paths are resolved from the current directory. The flag works before or after
+`explain`, for example `homelab-fmt explain --templates ./templates a.yaml`.
+
+The selected directory adds `.yaml` and `.yml` templates and replaces bundled
+templates with the same filename. `extends` resolves against this combined
+set, so user templates can extend bundled ones and bundled children inherit
+user overrides. `explain` shows each template's source and the source of its
+rules. A broken override is skipped with its descendants; the original bundled
+file is not restored. Replacement is complete: an override cannot extend the
+shadowed original using its own filename. A missing default directory is quiet; a missing directory
+selected by environment or flag warns and continues with bundled templates.
+The selected template directory is excluded from formatting and explain inputs.
 
 A template is one YAML document. Its values are placeholders; only its keys,
 blank lines and `homelab-fmt` comments matter.
@@ -156,15 +173,15 @@ extension. VS Code must see mise's shims on `PATH`.
 ## Layout
 
 - [`cmd/homelab-fmt`](cmd/homelab-fmt): command-line interface.
-- [`internal/templates`](internal/templates): loads the bundled templates,
+- [`internal/templates`](internal/templates): loads bundled and user templates,
   compiles them to rules, layers `extends` chains and picks one per document.
 - [`internal/format`](internal/format): `Format` and `Explain`; fixture pairs
   in `testdata/<name>.in.yaml` / `<name>.out.yaml`.
 - [`internal/rules`](internal/rules): the rule model (path, order, spacing),
   path matching and natural sort.
 - [`internal/yamltext`](internal/yamltext): block mappings as line ranges.
-- [`internal/files`](internal/files): discovery through `git ls-files` and
-  explicit-path selection.
+- [`internal/files`](internal/files): Git-aware discovery and explicit file
+  and directory selection.
 
 ## Development
 
