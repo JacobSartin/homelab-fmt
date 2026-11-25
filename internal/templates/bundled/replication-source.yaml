@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/volsync.backube/replicationsource_v1alpha1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A source has one mover and one trigger. Orders are
+# given for the Restic mover; the other movers keep theirs.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: example
+spec:
+  sourcePVC: example
+  trigger:
+    schedule: 0 * * * *
+    manual: example
+  paused: false
+  restic:
+    repository: example
+    copyMethod: Snapshot
+    pruneIntervalDays: 14
+    retain:
+      hourly: 24
+      daily: 7
+      weekly: 4
+      monthly: 6
+      yearly: 1
+      within: 3h
+      last: "1"
+    unlock: example
+    capacity: 1Gi
+    storageClassName: example
+    accessModes: []
+    volumeSnapshotClassName: example
+    cacheCapacity: 1Gi
+    cacheStorageClassName: example
+    cacheAccessModes: []
+    customCA: {}
+    moverServiceAccount: example
+    moverPodLabels: {}
+    moverAffinity: {}
+    moverResources: {}
+    moverVolumes: []
+    moverSecurityContext: {} # homelab-fmt: sort alphabetical
+  kopia: {}
+  rclone: {}
+  rsync: {}
+  rsyncTLS: {}
+  syncthing: {}
+  external: {}

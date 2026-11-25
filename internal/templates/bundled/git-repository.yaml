@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/gitrepository_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A ref has one of branch, tag, semver, name and commit.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: example
+spec:
+  interval: 1h
+  timeout: 1m
+  url: https://github.com/example/example
+  ref:
+    branch: main
+    tag: v1.0.0
+    semver: 1.x
+    name: refs/heads/main
+    commit: "0000000000000000000000000000000000000000"
+  provider: generic
+  secretRef:
+    name: example
+  serviceAccountName: example
+  proxySecretRef:
+    name: example
+  verify:
+    mode: HEAD
+    secretRef:
+      name: example
+  recurseSubmodules: false
+  sparseCheckout: []
+  include:
+    - repository:
+        name: example
+      fromPath: example
+      toPath: example
+  ignore: ""
+  suspend: false

@@ -1,33 +1,111 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-4.4.0/charts/other/app-template/values.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/values.schema.json
 persistence:
   config:
     type: emptyDir
 
     globalMounts:
-      - path: /config
+      - readOnly: true
+        path: /config
   cache:
     type: emptyDir
+serviceMonitor:
+  app:
+    endpoints:
+      - path: /metrics
+        port: http
+    service:
+      identifier: app
+listenerSets:
+  external:
+    listeners:
+      - tls:
+          certificateRefs:
+            - name: app-tls
+        protocol: HTTPS
+        port: 8443
+        hostname: app.example.com
+        name: https
+    parentRef:
+      namespace: gateway
+      name: external
+    labels:
+      gateway-role: external
+route:
+  app:
+    rules:
+      - backendRefs:
+          - port: http
+            identifier: app
+    parentRefs:
+      - sectionName: https
+        identifier: external
+    hostnames:
+      - app.example.com
+    annotations:
+      example.com/dns: local
+    labels:
+      gateway-role: external
+    kind: HTTPRoute
 service:
   app:
     ports:
       http:
         port: 80
 
+    clusterIP: None
     controller: app
 controllers:
   app:
     containers:
+      sidecar:
+        image:
+          repository: example/sidecar
+          tag: "1.0"
       app:
         resources:
           limits:
             memory: 1Gi
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
         probes:
           readiness:
             enabled: true
 
           liveness:
             enabled: true
-        securityContext: {}
+        securityContext:
+          runAsUser: 568
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        envFrom:
+          - secretRef:
+              name: app
+        env:
+          TZ: UTC
+        args: [serve]
+        command: [/app]
         image:
           tag: "1.0"
           repository: example/app
+    serviceAccount:
+      name: app
+    initContainers:
+      init:
+        securityContext: {}
+        command: [/init]
+        image:
+          tag: "1.0"
+          repository: example/init
+    pod:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 568
+      priorityClassName: example
+    statefulset:
+      podManagementPolicy: Parallel
+    type: statefulset
+defaultPodOptions:
+  automountServiceAccountToken: false

@@ -1,0 +1,42 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: app
+specs:
+  - description: Gateway to app
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: app
+    ingress:
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+  - description: App to its database
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: app
+    egress:
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: app-postgres
+        toPorts:
+          - ports:
+              - port: "5432"
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: egress
+spec:
+  endpointSelector:
+    matchLabels:
+      example.com/egress: world
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"

@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/ocirepository_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A ref has one of tag, semver and digest.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: example
+spec:
+  interval: 1h
+  timeout: 1m
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/example/charts/example
+  ref:
+    tag: 1.0.0
+    semver: 1.x
+    semverFilter: .*
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  provider: generic
+  secretRef:
+    name: example
+  serviceAccountName: example
+  certSecretRef:
+    name: example
+  proxySecretRef:
+    name: example
+  verify:
+    provider: cosign
+    secretRef:
+      name: example
+    matchOIDCIdentity: []
+  insecure: false
+  ignore: ""
+  suspend: false

@@ -1,11 +1,48 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-4.4.0/charts/other/app-template/values.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/values.schema.json
+defaultPodOptions:
+  automountServiceAccountToken: false
+
 controllers:
   app:
+    type: statefulset
+    statefulset:
+      podManagementPolicy: Parallel
+    serviceAccount:
+      name: app
+    pod:
+      priorityClassName: example
+      securityContext:
+        fsGroup: 568
+        runAsNonRoot: true
+      automountServiceAccountToken: false
+    initContainers:
+      init:
+        image:
+          repository: example/init
+          tag: "1.0"
+
+        command: [/init]
+        securityContext: {}
     containers:
+      sidecar:
+        image:
+          repository: example/sidecar
+          tag: "1.0"
+
       app:
         image:
           repository: example/app
           tag: "1.0"
+
+        command: [/app]
+        args: [serve]
+
+        env:
+          TZ: UTC
+
+        envFrom:
+          - secretRef:
+              name: app
 
         probes:
           readiness:
@@ -13,21 +50,75 @@ controllers:
           liveness:
             enabled: true
 
-        securityContext: {}
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 568
+
         resources:
           limits:
             memory: 1Gi
+
 service:
   app:
     controller: app
+    clusterIP: None
     ports:
       http:
         port: 80
+
+listenerSets:
+  external:
+    labels:
+      gateway-role: external
+    parentRef:
+      name: external
+      namespace: gateway
+    listeners:
+      - name: https
+        hostname: app.example.com
+        port: 8443
+        protocol: HTTPS
+        tls:
+          certificateRefs:
+            - name: app-tls
+
+route:
+  app:
+    kind: HTTPRoute
+    labels:
+      gateway-role: external
+    annotations:
+      example.com/dns: local
+    hostnames:
+      - app.example.com
+    parentRefs:
+      - identifier: external
+        sectionName: https
+    rules:
+      - backendRefs:
+          - identifier: app
+            port: http
+
+serviceMonitor:
+  app:
+    service:
+      identifier: app
+    endpoints:
+      - port: http
+        path: /metrics
+
 persistence:
   config:
     type: emptyDir
     globalMounts:
       - path: /config
+        readOnly: true
 
   cache:
     type: emptyDir

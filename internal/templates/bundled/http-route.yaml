@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/httproute_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A filter has the one field its type names.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example
+spec:
+  hostnames: []
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: example
+      namespace: example
+      sectionName: https
+      port: 443
+  useDefaultGateways: All
+  rules:
+    - name: example
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+          headers:
+            - type: Exact
+              name: example
+              value: example
+          queryParams:
+            - type: Exact
+              name: example
+              value: example
+          method: GET
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier: {}
+          responseHeaderModifier: {}
+          requestRedirect: {}
+          urlRewrite: {}
+          requestMirror:
+            backendRef:
+              group: ""
+              kind: Service
+              name: example
+              namespace: example
+              port: 80
+            percent: 1
+            fraction:
+              numerator: 1
+              denominator: 100
+          cors: {}
+          externalAuth:
+            protocol: HTTP
+            backendRef:
+              group: ""
+              kind: Service
+              name: example
+              namespace: example
+              port: 80
+            http: {}
+            grpc: {}
+            forwardBody: {}
+          extensionRef:
+            group: example.com
+            kind: Example
+            name: example
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: example
+          namespace: example
+          port: 80
+          weight: 1
+          filters: []
+      timeouts:
+        request: 10s
+        backendRequest: 10s
+      retry: {}
+      sessionPersistence: {}

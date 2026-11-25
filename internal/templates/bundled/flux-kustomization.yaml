@@ -6,26 +6,68 @@ kind: Kustomization
 metadata:
   name: example
 spec:
-  dependsOn: []
+  dependsOn:
+    - name: example
+      namespace: example
+      readyExpr: "true"
   interval: 10m
   retryInterval: 1m
   timeout: 5m
   path: ./example
   prune: true
+  deletionPolicy: Delete
+  force: false
   sourceRef:
+    apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
     name: example
     namespace: flux-system
   wait: true
   suspend: false
   targetNamespace: example
+  namePrefix: example-
+  nameSuffix: -example
+  commonMetadata:
+    labels: {}
+    annotations: {}
   serviceAccountName: example
+  kubeConfig: {}
   decryption:
     provider: sops
     secretRef:
       name: example
-  postBuild: {}
+    serviceAccountName: example
+  postBuild:
+    substitute: {}
+    substituteFrom:
+      - kind: Secret
+        name: example
+        optional: false
   components: []
-  patches: []
-  healthChecks: []
-  healthCheckExprs: []
+  ignoreMissingComponents: false
+  images:
+    - name: example
+      newName: example
+      newTag: 1.0.0
+      digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  patches:
+    - patch: ""
+      target:
+        group: apps
+        version: v1
+        kind: Deployment
+        name: example
+        namespace: example
+        labelSelector: app=example
+        annotationSelector: example=true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: example
+      namespace: example
+  healthCheckExprs:
+    - apiVersion: example.com/v1
+      kind: Example
+      failed: "false"
+      inProgress: "false"
+      current: "true"
