@@ -1,41 +1,103 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.2.1/charts/other/app-template/values.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/values.schema.json
 # homelab-fmt: schema */bjw-s*/helm-charts/app-template*/values.schema.json
 # Key order for bjw-s app-template values. Values are placeholders.
+# Top-level sections are separated by a blank line, as are the entries of the
+# sections that hold named resources.
 global: {}
-defaultPodOptions: {}
-controllers:
-  "*":
+
+namespace: {}
+
+defaultPodOptionsStrategy: overwrite
+defaultPodOptions:
+  labels: {}
+  annotations: {}
+  priorityClassName: example
+  runtimeClassName: example
+  schedulerName: example
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  hostNetwork: false
+  hostPID: false
+  hostIPC: false
+  hostUsers: true
+  hostname: example
+  hostAliases: []
+  dnsPolicy: ClusterFirst
+  dnsConfig: {}
+  enableServiceLinks: false
+  imagePullSecrets: []
+  shareProcessNamespace: false
+  restartPolicy: Always
+  securityContext: {} # homelab-fmt: sort alphabetical
+  terminationGracePeriodSeconds: 30
+  automountServiceAccountToken: true
+
+# One example per controller type, so each stays valid against the schema.
+# Their key orders are merged.
+controllers: # homelab-fmt: separate
+  "*deployment":
     enabled: true
     type: deployment
     forceRename: app
-    annotations: {}
     labels: {}
+    annotations: {}
     replicas: 1
     strategy: RollingUpdate
     rollingUpdate: {}
     podDisruptionBudget: {}
     revisionHistoryLimit: 3
+    serviceAccount: {}
     pod:
-      annotations: {}
       labels: {}
+      annotations: {}
+      priorityClassName: example
+      runtimeClassName: example
+      schedulerName: example
       nodeSelector: {}
       affinity: {}
       tolerations: []
-      securityContext: {}
+      topologySpreadConstraints: []
+      hostNetwork: false
+      hostPID: false
+      hostIPC: false
+      hostUsers: true
+      hostname: example
+      hostAliases: []
+      dnsPolicy: ClusterFirst
+      dnsConfig: {}
+      enableServiceLinks: false
+      imagePullSecrets: []
+      shareProcessNamespace: false
+      restartPolicy: Always
+      securityContext: {} # homelab-fmt: sort alphabetical
       terminationGracePeriodSeconds: 30
-    initContainers: {}
-    containers:
+      automountServiceAccountToken: true
+    initContainers: # homelab-fmt: separate
       "*":
+        enabled: true
+        nameOverride: app
+        dependsOn: []
         image: # homelab-fmt: compact
           repository: ghcr.io/example/app
           tag: 1.0.0
+          digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
           pullPolicy: IfNotPresent
 
+        restartPolicy: Always
+        workingDir: /app
+        stdin: false
+        tty: false
         command: []
         args: []
+
         env: {}
+
         envFrom: []
+
         ports: []
+
         probes: # homelab-fmt: compact
           startup:
             enabled: true
@@ -50,26 +112,213 @@ controllers:
             custom: true
             spec: {}
 
-        securityContext: {}
+        lifecycle: {}
+
+        securityContext: {} # homelab-fmt: sort alphabetical
+
         resources:
           requests: {}
           limits: {}
-service:
+    containers: # homelab-fmt: separate
+      "*":
+        enabled: true
+        nameOverride: app
+        dependsOn: []
+        image: # homelab-fmt: compact
+          repository: ghcr.io/example/app
+          tag: 1.0.0
+          digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+          pullPolicy: IfNotPresent
+
+        restartPolicy: Always
+        workingDir: /app
+        stdin: false
+        tty: false
+        command: []
+        args: []
+
+        env: {}
+
+        envFrom: []
+
+        ports: []
+
+        probes: # homelab-fmt: compact
+          startup:
+            enabled: true
+            custom: true
+            spec: {}
+          readiness:
+            enabled: true
+            custom: true
+            spec: {}
+          liveness:
+            enabled: true
+            custom: true
+            spec: {}
+
+        lifecycle: {}
+
+        securityContext: {} # homelab-fmt: sort alphabetical
+
+        resources:
+          requests: {}
+          limits: {}
+
+  "*statefulset":
+    type: statefulset
+    statefulset: {}
+    podDisruptionBudget: {}
+
+  "*cronjob":
+    type: cronjob
+    cronjob:
+      schedule: "0 * * * *"
+    podDisruptionBudget: {}
+
+  "*job":
+    type: job
+    job: {}
+    podDisruptionBudget: {}
+
+service: # homelab-fmt: separate
   "*": # homelab-fmt: compact
     enabled: true
     forceRename: app
+    primary: true
     controller: app
     type: LoadBalancer
+    clusterIP: 192.0.2.1
     loadBalancerIP: 192.0.2.10
     loadBalancerClass: example
     loadBalancerSourceRanges: []
     allocateLoadBalancerNodePorts: false
     externalTrafficPolicy: Local
-    annotations: {}
+    internalTrafficPolicy: Cluster
+    ipFamilyPolicy: SingleStack
+    ipFamilies: []
+    sessionAffinity: None
+    publishNotReadyAddresses: false
     labels: {}
-    ports: {}
-ingress: {}
-route: {}
+    annotations: {}
+    ports:
+      "*": # homelab-fmt: compact
+        enabled: true
+        primary: true
+        port: 80
+        targetPort: 8080
+        protocol: TCP
+        appProtocol: http
+
+ingress: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    className: example
+    labels: {}
+    annotations: {}
+    hosts:
+      - host: app.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service: {}
+    tls:
+      - hosts:
+          - app.example.com
+        secretName: app-tls
+
+listenerSets: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    labels: {}
+    annotations: {}
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: example
+      namespace: example
+    listeners:
+      - name: https
+        hostname: app.example.com
+        port: 443
+        protocol: HTTPS
+        tls:
+          mode: Terminate
+          certificateRefs:
+            - group: ""
+              kind: Secret
+              name: app-tls
+        allowedRoutes:
+          namespaces:
+            from: Same
+          kinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+
+route: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    kind: HTTPRoute
+    labels: {}
+    annotations: {}
+    hostnames: []
+    # A parentRef or backendRef has name or identifier, not both.
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: example
+        identifier: example
+        namespace: example
+        sectionName: https
+        port: 443
+    rules:
+      - name: app
+        matches: []
+        filters: []
+        backendRefs:
+          - group: ""
+            kind: Service
+            name: app
+            identifier: app
+            namespace: example
+            port: http
+            weight: 1
+        timeouts: {}
+        sessionPersistence: {}
+
+serviceMonitor: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    labels: {}
+    annotations: {}
+    service:
+      identifier: app
+    jobLabel: example
+    targetLabels: []
+    endpoints:
+      - port: http
+        targetPort: 8080
+        scheme: http
+        path: /metrics
+        params: {}
+        interval: 1m
+        scrapeTimeout: 10s
+        honorLabels: false
+        honorTimestamps: true
+        tlsConfig: {}
+        authorization: {}
+        basicAuth: {}
+        relabelings: []
+        metricRelabelings: []
+
+podMonitor: {}
+
+networkpolicies: {}
+
 # One example per persistence type, so each stays valid against the schema.
 # Their key orders are merged.
 persistence: # homelab-fmt: separate
@@ -98,8 +347,16 @@ persistence: # homelab-fmt: separate
     accessMode: ReadWriteOnce
     size: 1Gi
     retain: true
-    globalMounts: []
-    advancedMounts: {}
+    globalMounts:
+      - path: /data
+        subPath: app
+        readOnly: false
+    advancedMounts:
+      "*":
+        "*":
+          - path: /data
+            subPath: app
+            readOnly: false
 
   "*hostPath": # homelab-fmt: compact
     enabled: true
@@ -121,8 +378,34 @@ persistence: # homelab-fmt: separate
     sizeLimit: 1Gi
     globalMounts: []
 
-configMaps: {}
+configMaps: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    labels: {}
+    annotations: {}
+    data: {}
+    binaryData: {}
+
+configMapsFromFolder: {}
+
 secrets: {}
-serviceAccount: {}
+
+secretsFromFolder: {}
+
+defaultExternalSecretStoreRef:
+  kind: ClusterSecretStore
+  name: example
+externalSecrets: {}
+
+serviceAccount: # homelab-fmt: separate
+  "*": # homelab-fmt: compact
+    enabled: true
+    forceRename: app
+    labels: {}
+    annotations: {}
+    automountServiceAccountToken: true
+
 rbac: {}
+
 rawResources: {}

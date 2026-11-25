@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+# homelab-fmt: extends cilium-network-policy.yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy

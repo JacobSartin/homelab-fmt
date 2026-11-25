@@ -1,0 +1,128 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A policy has spec or specs and selects endpoints or
+# nodes; a rule has one kind of peer.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: example
+spec:
+  description: example
+  endpointSelector:
+    matchLabels: {}
+    matchExpressions: []
+  nodeSelector:
+    matchLabels: {}
+    matchExpressions: []
+  enableDefaultDeny:
+    ingress: true
+    egress: true
+  ingress:
+    - fromEndpoints: []
+      fromEntities: []
+      fromCIDR: []
+      fromCIDRSet: []
+      fromNodes: []
+      fromGroups: []
+      fromRequires: []
+      toPorts: []
+      icmps: []
+      authentication:
+        mode: required
+  ingressDeny:
+    - fromEndpoints: []
+      fromEntities: []
+      fromCIDR: []
+      fromCIDRSet: []
+      fromNodes: []
+      fromGroups: []
+      fromRequires: []
+      toPorts: []
+      icmps: []
+  egress:
+    - toEndpoints: []
+      toEntities: []
+      toCIDR: []
+      toCIDRSet: []
+      toFQDNs: []
+      toServices: []
+      toNodes: []
+      toGroups: []
+      toRequires: []
+      toPorts: []
+      icmps: []
+      authentication:
+        mode: required
+  egressDeny:
+    - toEndpoints: []
+      toEntities: []
+      toCIDR: []
+      toCIDRSet: []
+      toServices: []
+      toNodes: []
+      toGroups: []
+      toRequires: []
+      toPorts: []
+      icmps: []
+  labels: []
+  log: {}
+specs:
+  - description: example
+    endpointSelector:
+      matchLabels: {}
+      matchExpressions: []
+    nodeSelector:
+      matchLabels: {}
+      matchExpressions: []
+    enableDefaultDeny:
+      ingress: true
+      egress: true
+    ingress:
+      - fromEndpoints: []
+        fromEntities: []
+        fromCIDR: []
+        fromCIDRSet: []
+        fromNodes: []
+        fromGroups: []
+        fromRequires: []
+        toPorts: []
+        icmps: []
+        authentication:
+          mode: required
+    ingressDeny:
+      - fromEndpoints: []
+        fromEntities: []
+        fromCIDR: []
+        fromCIDRSet: []
+        fromNodes: []
+        fromGroups: []
+        fromRequires: []
+        toPorts: []
+        icmps: []
+    egress:
+      - toEndpoints: []
+        toEntities: []
+        toCIDR: []
+        toCIDRSet: []
+        toFQDNs: []
+        toServices: []
+        toNodes: []
+        toGroups: []
+        toRequires: []
+        toPorts: []
+        icmps: []
+        authentication:
+          mode: required
+    egressDeny:
+      - toEndpoints: []
+        toEntities: []
+        toCIDR: []
+        toCIDRSet: []
+        toServices: []
+        toNodes: []
+        toGroups: []
+        toRequires: []
+        toPorts: []
+        icmps: []
+    labels: []
+    log: {}

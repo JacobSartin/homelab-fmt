@@ -1,0 +1,61 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+spec:
+  parentRef:
+    name: external
+    namespace: gateway
+  listeners:
+    - name: https
+      hostname: app.example.com
+      port: 8443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - kind: Secret
+            name: app-tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+spec:
+  hostnames:
+    - app.example.com
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: app
+      sectionName: https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: auth
+      backendRefs:
+        - name: app
+          port: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: app
+spec:
+  secretName: app-tls
+  dnsNames:
+    - app.example.com
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: prod
+    kind: ClusterIssuer
+    group: cert-manager.io

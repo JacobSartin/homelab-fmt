@@ -1,0 +1,46 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: example
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [example]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: example
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: example
+subjects:
+  - kind: ServiceAccount
+    name: example
+    namespace: example
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: example
+  labels:
+    kubernetes.io/service-name: example
+addressType: IPv4
+ports:
+  - name: https
+    port: 443
+endpoints:
+  - addresses: [192.0.2.10]
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: example
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"

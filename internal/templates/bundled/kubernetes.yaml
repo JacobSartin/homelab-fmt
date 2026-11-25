@@ -1,5 +1,6 @@
 # Key order shared by every Kubernetes object. Templates for specific kinds
-# extend it. Values are placeholders.
+# extend it. Values are placeholders. The fields after binaryData belong to
+# the kinds that keep their content at the top level instead of in spec.
 apiVersion: "*"
 kind: "*"
 metadata:
@@ -8,9 +9,53 @@ metadata:
   namespace: default
   labels: {} # homelab-fmt: sort
   annotations: {} # homelab-fmt: sort
+  finalizers: []
 type: Opaque
 immutable: false
 spec: {}
 data: {}
 stringData: {}
 binaryData: {}
+# ServiceAccount
+automountServiceAccountToken: false
+imagePullSecrets: []
+secrets: []
+# Role and ClusterRole
+aggregationRule: {}
+rules:
+  - apiGroups: []
+    resources: []
+    resourceNames: []
+    nonResourceURLs: []
+    verbs: []
+# RoleBinding and ClusterRoleBinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: example
+subjects:
+  - kind: ServiceAccount
+    name: example
+    namespace: default
+    apiGroup: ""
+# EndpointSlice
+addressType: IPv4
+ports: []
+endpoints: []
+# StorageClass and VolumeSnapshotClass
+provisioner: example
+driver: example
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+deletionPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions: []
+allowedTopologies: []
+parameters: {}
+# Admission webhook configurations
+webhooks: []
+# PriorityClass
+value: 0
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: example

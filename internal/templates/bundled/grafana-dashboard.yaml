@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/grafana.integreatly.org/grafanadashboard_v1beta1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A dashboard has one source: grafanaCom, url,
+# configMapRef, json or jsonnet.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: example
+spec:
+  allowCrossNamespaceImport: true
+  resyncPeriod: 10m
+  suspend: false
+  instanceSelector:
+    matchLabels: {}
+    matchExpressions: []
+  uid: example
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: prometheus
+  plugins:
+    - name: example
+      version: 1.0.0
+  envs: []
+  envFrom: []
+  grafanaCom:
+    id: 1
+    revision: 1
+  url: https://example.com/dashboard.json
+  urlAuthorization: {}
+  configMapRef:
+    name: example
+    key: dashboard.json
+    optional: false
+  json: "{}"
+  gzipJson: ""
+  jsonnet: "{}"
+  jsonnetLib:
+    jPath: []
+    fileName: dashboard.jsonnet
+    gzipJsonnetProject: ""
+  contentCacheDuration: 24h
+  folder: example
+  folderUID: example
+  folderRef: example

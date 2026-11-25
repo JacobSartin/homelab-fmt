@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/volsync.backube/replicationdestination_v1alpha1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A destination has one mover and one trigger. Orders
+# are given for the Restic mover; the other movers keep theirs.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: example
+spec:
+  trigger:
+    manual: example
+    schedule: 0 * * * *
+  paused: false
+  restic:
+    repository: example
+    copyMethod: Snapshot
+    capacity: 1Gi
+    cleanupTempPVC: true
+    cleanupCachePVC: true
+    destinationPVC: example
+    restoreAsOf: "2026-01-01T00:00:00Z"
+    previous: 1
+    enableFileDeletion: false
+    storageClassName: example
+    accessModes: []
+    volumeSnapshotClassName: example
+    cacheCapacity: 1Gi
+    cacheStorageClassName: example
+    cacheAccessModes: []
+    customCA: {}
+    moverServiceAccount: example
+    moverPodLabels: {}
+    moverAffinity: {}
+    moverResources: {}
+    moverVolumes: []
+    moverSecurityContext: {} # homelab-fmt: sort alphabetical
+  kopia: {}
+  rclone: {}
+  rsync: {}
+  rsyncTLS: {}
+  external: {}

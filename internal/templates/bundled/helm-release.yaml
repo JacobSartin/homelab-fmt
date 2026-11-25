@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
 # homelab-fmt: extends kubernetes.yaml
-# Values are placeholders.
+# Values are placeholders. A release has chart or chartRef, not both.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,15 +8,27 @@ metadata:
 spec:
   interval: 15m
   chart:
+    metadata:
+      labels: {}
+      annotations: {}
     spec:
       chart: app-template
       version: 1.0.0
       sourceRef:
+        apiVersion: source.toolkit.fluxcd.io/v1
         kind: HelmRepository
         name: example
         namespace: flux-system
       interval: 15m
+      reconcileStrategy: ChartVersion
+      valuesFiles: []
+      ignoreMissingValuesFiles: false
+      verify:
+        provider: cosign
+        secretRef:
+          name: example
   chartRef:
+    apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     name: example
     namespace: flux-system
@@ -24,17 +36,83 @@ spec:
   targetNamespace: example
   storageNamespace: example
   serviceAccountName: example
-  dependsOn: []
+  kubeConfig: {}
+  persistentClient: true
+  commonMetadata:
+    labels: {}
+    annotations: {}
+  dependsOn:
+    - name: example
+      namespace: example
+      readyExpr: "true"
   suspend: false
   timeout: 20m
   maxHistory: 3
-  driftDetection: {}
-  install: {}
-  upgrade: {}
-  test: {}
+  waitStrategy:
+    name: poller
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths: []
+        target: {}
+  install:
+    createNamespace: true
+    crds: CreateReplace
+    skipCRDs: false
+    replace: false
+    serverSideApply: true
+    disableTakeOwnership: false
+    disableHooks: false
+    disableOpenAPIValidation: false
+    disableSchemaValidation: false
+    disableWait: false
+    disableWaitForJobs: false
+    timeout: 20m
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+      ignoreTestFailures: false
+  upgrade:
+    cleanupOnFail: true
+    crds: CreateReplace
+    force: false
+    preserveValues: false
+    serverSideApply: enabled
+    disableTakeOwnership: false
+    disableHooks: false
+    disableOpenAPIValidation: false
+    disableSchemaValidation: false
+    disableWait: false
+    disableWaitForJobs: false
+    timeout: 20m
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    remediation:
+      strategy: rollback
+      retries: 3
+      remediateLastFailure: true
+      ignoreTestFailures: false
+  test:
+    enable: true
+    timeout: 5m
+    ignoreFailures: false
+    filters: []
   rollback: {}
   uninstall: {}
+  healthCheckExprs: []
   # Inline values are merged over valuesFrom.
-  valuesFrom: []
+  valuesFrom:
+    - kind: ConfigMap
+      name: example
+      valuesKey: values.yaml
+      targetPath: example
+      optional: false
   values: {}
-  postRenderers: []
+  postRenderers:
+    - kustomize:
+        patches: []
+        images: []

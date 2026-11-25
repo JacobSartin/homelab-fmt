@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. A certificate has subject or literalSubject, and
+# renewBefore or renewBeforePercentage, not both.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example
+spec:
+  secretName: example
+  secretTemplate:
+    labels: {}
+    annotations: {}
+  commonName: example.com
+  subject: {}
+  literalSubject: CN=example.com
+  dnsNames: []
+  ipAddresses: []
+  uris: []
+  emailAddresses: []
+  otherNames: []
+  duration: 2160h
+  renewBefore: 360h
+  renewBeforePercentage: 33
+  isCA: false
+  usages: []
+  encodeUsagesInRequest: false
+  signatureAlgorithm: ECDSAWithSHA256
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    size: 256
+    rotationPolicy: Always
+  keystores: {}
+  additionalOutputFormats: []
+  nameConstraints: {}
+  revisionHistoryLimit: 1
+  issuerRef:
+    name: example
+    kind: ClusterIssuer
+    group: cert-manager.io

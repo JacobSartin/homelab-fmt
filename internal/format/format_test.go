@@ -352,7 +352,7 @@ func TestExplain(t *testing.T) {
 	}
 	for _, want := range []string{
 		"x.yaml, document 1: template bundled/helm-release.yaml extends bundled/kubernetes.yaml\n",
-		"  metadata: order name, generateName, namespace, labels, annotations (bundled/helm-release.yaml:",
+		"  metadata: order name, generateName, namespace, labels, annotations, finalizers (bundled/helm-release.yaml:",
 		"  spec.groups.0.rules: separate items (bundled/prometheus-rule.yaml:",
 		"x.yaml, document 2: no template matches; left as is\n",
 	} {

@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/helmrepository_v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: example
+spec:
+  type: oci
+  interval: 1h
+  timeout: 1m
+  url: oci://ghcr.io/example/charts
+  provider: generic
+  secretRef:
+    name: example
+  certSecretRef:
+    name: example
+  passCredentials: false
+  insecure: false
+  accessFrom:
+    namespaceSelectors: []
+  suspend: false

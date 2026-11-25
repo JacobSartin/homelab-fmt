@@ -11,11 +11,18 @@ documents laid out the way formatted files should look.
 | Template | Formats |
 | --- | --- |
 | [`app-template.yaml`](internal/templates/bundled/app-template.yaml) | bjw-s app-template values |
-| [`kubernetes.yaml`](internal/templates/bundled/kubernetes.yaml) | top-level fields and `metadata` of every Kubernetes object |
-| [`helm-release.yaml`](internal/templates/bundled/helm-release.yaml) | Flux `HelmRelease` |
-| [`flux-kustomization.yaml`](internal/templates/bundled/flux-kustomization.yaml) | Flux `Kustomization` |
-| [`prometheus-rule.yaml`](internal/templates/bundled/prometheus-rule.yaml) | prometheus-operator `PrometheusRule`, with a blank line between rules |
+| [`kubernetes.yaml`](internal/templates/bundled/kubernetes.yaml) | `metadata` and top-level fields of every Kubernetes object, including the kinds without a `spec`, such as RBAC objects, `EndpointSlice` and `StorageClass` |
+| [`helm-release.yaml`](internal/templates/bundled/helm-release.yaml), [`flux-kustomization.yaml`](internal/templates/bundled/flux-kustomization.yaml) | Flux `HelmRelease` and `Kustomization` |
+| [`oci-repository.yaml`](internal/templates/bundled/oci-repository.yaml), [`git-repository.yaml`](internal/templates/bundled/git-repository.yaml), [`helm-repository.yaml`](internal/templates/bundled/helm-repository.yaml) | Flux sources |
 | [`kustomization.yaml`](internal/templates/bundled/kustomization.yaml), [`kustomize-component.yaml`](internal/templates/bundled/kustomize-component.yaml) | kustomize `Kustomization` and `Component` |
+| [`external-secret.yaml`](internal/templates/bundled/external-secret.yaml) | External Secrets `ExternalSecret` |
+| [`persistent-volume-claim.yaml`](internal/templates/bundled/persistent-volume-claim.yaml) | `PersistentVolumeClaim` |
+| [`replication-source.yaml`](internal/templates/bundled/replication-source.yaml), [`replication-destination.yaml`](internal/templates/bundled/replication-destination.yaml) | VolSync `ReplicationSource` and `ReplicationDestination` |
+| [`http-route.yaml`](internal/templates/bundled/http-route.yaml), [`listener-set.yaml`](internal/templates/bundled/listener-set.yaml) | Gateway API `HTTPRoute` and `ListenerSet` |
+| [`certificate.yaml`](internal/templates/bundled/certificate.yaml) | cert-manager `Certificate` |
+| [`cilium-network-policy.yaml`](internal/templates/bundled/cilium-network-policy.yaml), [`cilium-clusterwide-network-policy.yaml`](internal/templates/bundled/cilium-clusterwide-network-policy.yaml) | Cilium `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` |
+| [`prometheus-rule.yaml`](internal/templates/bundled/prometheus-rule.yaml) | prometheus-operator `PrometheusRule`, with a blank line between rules |
+| [`grafana-dashboard.yaml`](internal/templates/bundled/grafana-dashboard.yaml) | grafana-operator `GrafanaDashboard` |
 
 How it edits:
 
@@ -138,10 +145,12 @@ Header comments, above the first key, select documents and layer templates:
   keys the child does not list.
 
 To change the order, edit the template. To support a new kind, add a template,
-usually extending `kubernetes.yaml`. Keep templates valid against their
-schema, with a `yaml-language-server` modeline where one exists. Tests check
-that every template loads, selects itself, formats to itself and is restored
-after its mappings are shuffled.
+usually extending `kubernetes.yaml`. List every field a mapping can hold: an
+unlisted key ends up after the listed ones, behind a blank line. Keep templates
+valid against their schema, with a `yaml-language-server` modeline where one
+exists; where one example cannot hold every field, say so in the header
+comment. Tests check that every template loads, selects itself, formats to
+itself and is restored after its mappings are shuffled.
 
 Invalid templates produce warnings with their filename, line and reason.
 They and any templates extending them are skipped. Documents fall back to the

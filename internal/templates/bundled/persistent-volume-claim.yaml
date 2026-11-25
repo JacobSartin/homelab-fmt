@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.36.0/persistentvolumeclaim-v1.json
+# homelab-fmt: extends kubernetes.yaml
+# Values are placeholders. The spec is in alphabetical order, as kubectl
+# prints it. A claim has dataSource or dataSourceRef, not both.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example
+spec:
+  accessModes: []
+  dataSource:
+    apiGroup: snapshot.storage.k8s.io
+    kind: VolumeSnapshot
+    name: example
+  dataSourceRef:
+    apiGroup: volsync.backube
+    kind: ReplicationDestination
+    name: example
+    namespace: example
+  resources:
+    requests:
+      storage: 1Gi
+    limits:
+      storage: 1Gi
+  selector: {}
+  storageClassName: example
+  volumeAttributesClassName: example
+  volumeMode: Filesystem
+  volumeName: example
